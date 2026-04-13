@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - plan: string (required, enum: ['FREE', 'PRO'])
+    //   - subscriptionId: string (optional)
+    //   - updatedAt: timestamp (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "bhavishyashekhawat11@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasOnly(['plan', 'subscriptionId', 'updatedAt']) &&
+             data.plan in ['FREE', 'PRO'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Only the backend (admin) or the user themselves (with restrictions) can write
+      // Actually, for plan changes, we should only allow the backend.
+      // But for initial setup, we might allow the user to create their FREE profile.
+      allow create: if isOwner(userId) && request.resource.data.plan == 'FREE';
+      
+      // Updates to plan should be restricted to admin (backend)
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.plan == resource.data.plan);
+    }
+  }
+}

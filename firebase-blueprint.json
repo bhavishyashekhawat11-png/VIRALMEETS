@@ -1,0 +1,32 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and subscription data",
+      "type": "object",
+      "properties": {
+        "plan": {
+          "type": "string",
+          "enum": ["FREE", "PRO"],
+          "description": "The user's subscription plan"
+        },
+        "subscriptionId": {
+          "type": "string",
+          "description": "Stripe subscription ID"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["plan"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User document"
+    }
+  }
+}
