@@ -7,9 +7,18 @@ import { cn } from './lib/utils';
 import { DeepAnalysisView } from './components/DeepAnalysisView';
 import { SubscriptionView } from './components/SubscriptionView';
 import { LandingPage } from './components/LandingPage';
-import { EtheralShadow } from './components/ui/etheral-shadow';
+import { FeaturesGrid } from './components/FeaturesGrid';
+import { FeaturesPage } from './components/FeaturesPage';
+import { PricingPage } from './components/PricingPage';
+import { AboutPage } from './components/AboutPage';
+import { Navbar } from './components/Navbar';
+import { AuthModal } from './components/AuthModal';
+import { Background } from './components/Background';
+import { FallingPattern } from './components/ui/falling-pattern';
 import { Footer } from './components/Footer';
 import { Step, Platform, PastIdea } from './types';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext';
 import { LegalPage } from './components/LegalPage';
@@ -53,6 +62,15 @@ export default function App() {
   const [bestScore, setBestScore] = useState(0);
   const [todayBest, setTodayBest] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('viralmeets_profile');
@@ -176,14 +194,47 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-rose-500/30 overflow-x-hidden relative">
-      <EtheralShadow />
+      <Background />
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]">
+        <FallingPattern color="#e11d48" duration={200} blurIntensity="0px" />
+      </div>
+      
+      <Navbar 
+        onNavigate={(s) => setStep(s as Step)} 
+        onAuth={() => setAuthModalOpen(true)}
+        user={user}
+        onLogout={() => signOut(auth)}
+      />
+
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
       
       <AnimatePresence mode="wait">
         {step === 'landing' && (
-          <LandingPage key="landing" onStart={() => setStep(userProfile ? 'home' : 'onboarding')} />
+          <LandingPage 
+            key="landing" 
+            onStart={() => {
+              if (!user) {
+                setAuthModalOpen(true);
+              } else {
+                setStep(userProfile ? 'home' : 'onboarding');
+              }
+            }} 
+          />
         )}
 
-        {step !== 'landing' && (
+        {step === 'features' && (
+          <FeaturesPage key="features" />
+        )}
+
+        {step === 'pricing' && (
+          <PricingPage key="pricing" />
+        )}
+
+        {step === 'about' && (
+          <AboutPage key="about" />
+        )}
+
+        {step !== 'landing' && !['features', 'pricing', 'about'].includes(step) && (
           <motion.main 
             key="app-content"
             initial={{ opacity: 0 }}
@@ -251,7 +302,7 @@ export default function App() {
           <LegalPage 
             title="Privacy Policy" 
             onBack={() => setStep('home')}
-            content={`At viralmeets, we respect your privacy and are committed to protecting your personal information.
+            content={`At ViralMeets, we respect your privacy and are committed to protecting your personal information.
 
 ### 1. Information We Collect
 
@@ -307,13 +358,13 @@ This policy may be updated periodically. Continued use of the app means you acce
           <LegalPage 
             title="Terms & Conditions" 
             onBack={() => setStep('home')}
-            content={`By using viralmeets, you agree to the following terms:
+            content={`By using ViralMeets, you agree to the following terms:
 
 ---
 
 ### 1. Use of Service
 
-viralmeets provides AI-based analysis and recommendations for content. The insights are **informational and predictive**, not guaranteed outcomes.
+ViralMeets provides AI-based analysis and recommendations for content. The insights are **informational and predictive**, not guaranteed outcomes.
 
 ---
 
@@ -347,7 +398,7 @@ We reserve the right to:
 
 ### 5. Intellectual Property
 
-All app content, design, and features belong to viralmeets. Users may not copy or redistribute without permission.
+All app content, design, and features belong to ViralMeets. Users may not copy or redistribute without permission.
 
 ---
 
@@ -372,7 +423,7 @@ Terms may change over time. Continued use means acceptance of updated terms.`}
             onBack={() => setStep('home')}
             content={`All purchases are **final and non-refundable**.
 
-Since viralmeets provides instant digital access to premium features, refunds cannot be issued once access is granted.
+Since ViralMeets provides instant digital access to premium features, refunds cannot be issued once access is granted.
 
 ---
 
@@ -390,7 +441,7 @@ Requests must be made within **48 hours** of purchase.`}
           <LegalPage 
             title="Contact Us" 
             onBack={() => setStep('home')}
-            content={`We’re here to help and support you at every step of your journey with viralmeets.
+            content={`We’re here to help and support you at every step of your journey with ViralMeets.
 
 ---
 
@@ -455,7 +506,7 @@ For faster support:
                 <RotateCcw className="w-8 h-8 text-rose-500 animate-pulse" />
               </div>
             </div>
-            <p className="text-zinc-400 font-bold">Resetting your viralmeets...</p>
+            <p className="text-zinc-400 font-bold">Resetting your ViralMeets...</p>
           </motion.div>
         )}
         {step === 'result' && result && analysisStage !== 'idle' && (
@@ -604,7 +655,7 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
           <motion.div key="step0" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
               <Skull className="w-12 h-12 text-rose-500" />
-              <h1 className="text-6xl font-black bg-gradient-to-br from-rose-400 to-rose-600 bg-clip-text text-transparent leading-tight tracking-tighter">viralmeets</h1>
+              <h1 className="text-6xl font-black bg-gradient-to-br from-rose-400 to-rose-600 bg-clip-text text-transparent leading-tight tracking-tighter">ViralMeets</h1>
             </div>
             <div className="space-y-4 mb-12">
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-xl font-bold text-zinc-300">Know if it’ll hit—before you post.</motion.p>
@@ -762,14 +813,14 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
             <h2 className="text-4xl font-black text-zinc-100 mb-8 text-center leading-tight mt-6">
               <div className="flex items-center justify-center gap-3 mb-2">
                 <Skull className="w-8 h-8 text-rose-500" />
-                <span>viralmeets</span>
+                <span>ViralMeets</span>
               </div>
               <span className="text-rose-400 text-2xl">Know if it’ll hit—before you post.</span>
             </h2>
             
             <div className="flex gap-3 mb-10">
               <div className="flex-1 bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
-                <div className="text-[10px] font-black text-zinc-500 mb-4 uppercase tracking-widest text-center">Without viralmeets</div>
+                <div className="text-[10px] font-black text-zinc-500 mb-4 uppercase tracking-widest text-center">Without ViralMeets</div>
                 <ul className="space-y-4 text-xs text-zinc-400 font-bold">
                   <li className="flex items-center gap-2"><X className="w-4 h-4 text-rose-500/50 shrink-0"/> Guessing ideas</li>
                   <li className="flex items-center gap-2"><X className="w-4 h-4 text-rose-500/50 shrink-0"/> Low reach</li>
@@ -780,7 +831,7 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
               
               <div className="flex-1 bg-rose-500/10 border border-rose-500/30 p-4 rounded-2xl relative overflow-hidden shadow-[0_0_20px_rgba(225,29,72,0.1)]">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/20 blur-2xl rounded-full"></div>
-                <div className="text-[10px] font-black text-rose-400 mb-4 uppercase tracking-widest text-center">With viralmeets</div>
+                <div className="text-[10px] font-black text-rose-400 mb-4 uppercase tracking-widest text-center">With ViralMeets</div>
                 <ul className="space-y-4 text-xs text-zinc-100 font-bold relative z-10">
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0"/> Tested ideas</li>
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0"/> Higher engagement</li>
@@ -813,7 +864,7 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
                 Detecting growth opportunities...
               </motion.p>
               <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: 1.6 } }} exit={{ opacity: 0, y: -10 }} className="text-rose-400 font-bold text-center absolute">
-                Setting up your viralmeets...
+                Setting up your ViralMeets...
               </motion.p>
             </div>
           </motion.div>
@@ -1022,7 +1073,7 @@ function HomeView({
           <div className="flex items-center gap-3 mb-2">
             <Skull className="w-10 h-10 text-rose-500" />
             <h1 className="text-6xl font-black bg-gradient-to-br from-rose-400 to-rose-600 bg-clip-text text-transparent leading-tight tracking-tighter">
-              viralmeets
+              ViralMeets
             </h1>
           </div>
           <p className="text-zinc-400 text-sm font-medium">Know if it’ll hit—before you post.</p>
@@ -1357,7 +1408,7 @@ function LoadingView(_props: { key?: string }) {
 
 function BottomNav({ currentStep, onNavigate }: { currentStep: Step, onNavigate: (s: Step) => void }) {
   const tabs = [
-    { id: 'home', label: 'Home', icon: RefreshCw },
+    { id: 'home', label: 'ViralMeets', icon: RefreshCw },
     { id: 'deep_analysis', label: 'Deep Analysis', icon: Clapperboard },
     { id: 'settings', label: 'Settings', icon: Zap }
   ];
@@ -1451,7 +1502,7 @@ function SettingsView({ onBack, onLegalClick }: { onBack: () => void, onLegalCli
       </div>
 
       <div className="mt-auto pt-12 text-center">
-        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">© 2026 viralmeets. All rights reserved.</p>
+        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">© 2026 ViralMeets. All rights reserved.</p>
         <p className="text-[10px] font-bold text-zinc-700">Version 1.0.4 (Stable)</p>
       </div>
     </motion.div>
