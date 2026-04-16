@@ -17,18 +17,18 @@ const SubscriptionContext = createContext<SubscriptionContextType | undefined>(u
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [plan, setPlan] = useState<'FREE' | 'PRO'>(() => {
-    const saved = localStorage.getItem('viralmeter_plan');
+    const saved = localStorage.getItem('viralmeets_plan');
     return (saved as 'FREE' | 'PRO') || 'FREE';
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [analysisCount, setAnalysisCount] = useState(() => {
-    const saved = localStorage.getItem('viralmeter_analysis_count');
-    const lastReset = localStorage.getItem('viralmeter_last_reset_date');
+    const saved = localStorage.getItem('viralmeets_analysis_count');
+    const lastReset = localStorage.getItem('viralmeets_last_reset_date');
     const today = new Date().toDateString();
     
     if (lastReset !== today) {
-      localStorage.setItem('viralmeter_last_reset_date', today);
-      localStorage.setItem('viralmeter_analysis_count', '0');
+      localStorage.setItem('viralmeets_last_reset_date', today);
+      localStorage.setItem('viralmeets_analysis_count', '0');
       return 0;
     }
     return parseInt(saved || '0', 10);
@@ -39,14 +39,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const upgrade = () => {
     setPlan('PRO');
-    localStorage.setItem('viralmeter_plan', 'PRO');
+    localStorage.setItem('viralmeets_plan', 'PRO');
     setShowUpgradeModal(false);
   };
 
   const incrementUsage = () => {
     const newCount = analysisCount + 1;
     setAnalysisCount(newCount);
-    localStorage.setItem('viralmeter_analysis_count', newCount.toString());
+    localStorage.setItem('viralmeets_analysis_count', newCount.toString());
   };
 
   const checkLimit = () => {

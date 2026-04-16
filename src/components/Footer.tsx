@@ -10,7 +10,7 @@ export function Footer({ onLegalClick }: { onLegalClick: (s: Step) => void }) {
         <button onClick={() => onLegalClick('refund')} className="hover:text-rose-400 transition-colors">Refund Policy</button>
         <button onClick={() => onLegalClick('contact')} className="hover:text-rose-400 transition-colors">Contact</button>
       </div>
-      <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">© 2026 ViralMeter. All rights reserved.</p>
+      <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">© 2026 viralmeets. All rights reserved.</p>
     </div>
   );
 }

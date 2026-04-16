@@ -6,6 +6,8 @@ import { cn } from './lib/utils';
 
 import { DeepAnalysisView } from './components/DeepAnalysisView';
 import { SubscriptionView } from './components/SubscriptionView';
+import { LandingPage } from './components/LandingPage';
+import { EtheralShadow } from './components/ui/etheral-shadow';
 import { Footer } from './components/Footer';
 import { Step, Platform, PastIdea } from './types';
 
@@ -34,7 +36,7 @@ const RANDOM_IDEAS = [
 
 export default function App() {
   const { isPro, plan, checkLimit, incrementUsage, setShowUpgradeModal } = useSubscription();
-  const [step, setStep] = useState<Step>('home');
+  const [step, setStep] = useState<Step>('landing');
   const [analysisStage, setAnalysisStage] = useState<'idle' | 'quick' | 'detailed'>('idle');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [idea, setIdea] = useState('');
@@ -53,18 +55,16 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const savedProfile = localStorage.getItem('flopmeter_profile');
+    const savedProfile = localStorage.getItem('viralmeets_profile');
     if (savedProfile) {
       setUserProfile(JSON.parse(savedProfile));
       setStep('home');
-    } else {
-      setStep('onboarding');
     }
 
-    const savedStreak = localStorage.getItem('viral_copilot_streak');
+    const savedStreak = localStorage.getItem('viralmeets_streak');
     if (savedStreak) setStreak(parseInt(savedStreak, 10));
     
-    const storedData = localStorage.getItem('viral_copilot_data');
+    const storedData = localStorage.getItem('viralmeets_data');
     if (storedData) {
       try {
         const data = JSON.parse(storedData);
@@ -110,7 +110,7 @@ export default function App() {
         
         const newStreak = streak + 1;
         setStreak(newStreak);
-        localStorage.setItem('viral_copilot_streak', newStreak.toString());
+        localStorage.setItem('viralmeets_streak', newStreak.toString());
 
         const newIdea: PastIdea = { id: Date.now().toString(), idea: idea || 'Media Idea', score: detailedRes.score, timestamp: Date.now() };
         const updatedIdeas = [newIdea, ...pastIdeas].slice(0, 5);
@@ -123,7 +123,7 @@ export default function App() {
         const todayIdeas = updatedIdeas.filter(i => i.timestamp >= today);
         setTodayBest(todayIdeas.length ? Math.max(...todayIdeas.map(i => i.score)) : 0);
         
-        localStorage.setItem('viral_copilot_data', JSON.stringify({ pastIdeas: updatedIdeas, bestScore: newBest }));
+        localStorage.setItem('viralmeets_data', JSON.stringify({ pastIdeas: updatedIdeas, bestScore: newBest }));
       } catch (detailedErr: any) {
         console.error("Analysis failed:", detailedErr);
         setAnalysisStage('detailed');
@@ -158,9 +158,9 @@ export default function App() {
   const handleFullReset = () => {
     setStep('resetting');
     setTimeout(() => {
-      localStorage.removeItem('flopmeter_profile');
-      localStorage.removeItem('viral_copilot_streak');
-      localStorage.removeItem('viral_copilot_data');
+      localStorage.removeItem('viralmeets_profile');
+      localStorage.removeItem('viralmeets_streak');
+      localStorage.removeItem('viralmeets_data');
       setUserProfile(null);
       setStreak(0);
       setPastIdeas([]);
@@ -175,18 +175,31 @@ export default function App() {
   };
 
   return (
-    <main className="min-h-screen w-full max-w-md mx-auto relative overflow-hidden flex flex-col">
-      <AnimatePresence>
-      </AnimatePresence>
-      <UpgradeModal onManageSubscription={() => setStep('manage_subscription')} />
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-rose-500/30 overflow-x-hidden relative">
+      <EtheralShadow />
+      
       <AnimatePresence mode="wait">
-          {step === 'onboarding' && (
+        {step === 'landing' && (
+          <LandingPage key="landing" onStart={() => setStep(userProfile ? 'home' : 'onboarding')} />
+        )}
+
+        {step !== 'landing' && (
+          <motion.main 
+            key="app-content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="min-h-screen w-full max-w-md mx-auto relative flex flex-col"
+          >
+            <UpgradeModal onManageSubscription={() => setStep('manage_subscription')} />
+            <AnimatePresence mode="wait">
+              {step === 'onboarding' && (
           <OnboardingView 
             key="onboarding" 
             initialProfile={userProfile}
             onComplete={(profile) => {
               setUserProfile(profile);
-              localStorage.setItem('flopmeter_profile', JSON.stringify(profile));
+              localStorage.setItem('viralmeets_profile', JSON.stringify(profile));
               if (result) {
                 handleAnalyze();
               } else {
@@ -238,7 +251,7 @@ export default function App() {
           <LegalPage 
             title="Privacy Policy" 
             onBack={() => setStep('home')}
-            content={`At ViralMeter, we respect your privacy and are committed to protecting your personal information.
+            content={`At viralmeets, we respect your privacy and are committed to protecting your personal information.
 
 ### 1. Information We Collect
 
@@ -294,13 +307,13 @@ This policy may be updated periodically. Continued use of the app means you acce
           <LegalPage 
             title="Terms & Conditions" 
             onBack={() => setStep('home')}
-            content={`By using ViralMeter, you agree to the following terms:
+            content={`By using viralmeets, you agree to the following terms:
 
 ---
 
 ### 1. Use of Service
 
-ViralMeter provides AI-based analysis and recommendations for content. The insights are **informational and predictive**, not guaranteed outcomes.
+viralmeets provides AI-based analysis and recommendations for content. The insights are **informational and predictive**, not guaranteed outcomes.
 
 ---
 
@@ -334,7 +347,7 @@ We reserve the right to:
 
 ### 5. Intellectual Property
 
-All app content, design, and features belong to ViralMeter. Users may not copy or redistribute without permission.
+All app content, design, and features belong to viralmeets. Users may not copy or redistribute without permission.
 
 ---
 
@@ -359,7 +372,7 @@ Terms may change over time. Continued use means acceptance of updated terms.`}
             onBack={() => setStep('home')}
             content={`All purchases are **final and non-refundable**.
 
-Since ViralMeter provides instant digital access to premium features, refunds cannot be issued once access is granted.
+Since viralmeets provides instant digital access to premium features, refunds cannot be issued once access is granted.
 
 ---
 
@@ -377,7 +390,7 @@ Requests must be made within **48 hours** of purchase.`}
           <LegalPage 
             title="Contact Us" 
             onBack={() => setStep('home')}
-            content={`We’re here to help and support you at every step of your journey with ViralMeter.
+            content={`We’re here to help and support you at every step of your journey with viralmeets.
 
 ---
 
@@ -385,7 +398,7 @@ Requests must be made within **48 hours** of purchase.`}
 
 For any questions, issues, or feedback:
 
-**support@viralmeter**
+**support@viralmeets.com**
 
 ---
 
@@ -442,7 +455,7 @@ For faster support:
                 <RotateCcw className="w-8 h-8 text-rose-500 animate-pulse" />
               </div>
             </div>
-            <p className="text-zinc-400 font-bold">Resetting your ViralMeter...</p>
+            <p className="text-zinc-400 font-bold">Resetting your viralmeets...</p>
           </motion.div>
         )}
         {step === 'result' && result && analysisStage !== 'idle' && (
@@ -467,12 +480,15 @@ For faster support:
             onLegalClick={(s) => setStep(s)}
           />
         )}
-      </AnimatePresence>
+            </AnimatePresence>
 
-      {['home', 'deep_analysis', 'settings', 'result'].includes(step) && (
-        <BottomNav currentStep={step} onNavigate={(s) => setStep(s)} />
-      )}
-    </main>
+            {['home', 'deep_analysis', 'settings', 'result'].includes(step) && (
+              <BottomNav currentStep={step} onNavigate={(s) => setStep(s)} />
+            )}
+          </motion.main>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -588,7 +604,7 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
           <motion.div key="step0" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
               <Skull className="w-12 h-12 text-rose-500" />
-              <h1 className="text-6xl font-black bg-gradient-to-br from-rose-400 to-rose-600 bg-clip-text text-transparent leading-tight tracking-tighter">ViralMeter</h1>
+              <h1 className="text-6xl font-black bg-gradient-to-br from-rose-400 to-rose-600 bg-clip-text text-transparent leading-tight tracking-tighter">viralmeets</h1>
             </div>
             <div className="space-y-4 mb-12">
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-xl font-bold text-zinc-300">Know if it’ll hit—before you post.</motion.p>
@@ -746,14 +762,14 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
             <h2 className="text-4xl font-black text-zinc-100 mb-8 text-center leading-tight mt-6">
               <div className="flex items-center justify-center gap-3 mb-2">
                 <Skull className="w-8 h-8 text-rose-500" />
-                <span>ViralMeter</span>
+                <span>viralmeets</span>
               </div>
               <span className="text-rose-400 text-2xl">Know if it’ll hit—before you post.</span>
             </h2>
             
             <div className="flex gap-3 mb-10">
               <div className="flex-1 bg-zinc-900/50 border border-zinc-800 p-4 rounded-2xl">
-                <div className="text-[10px] font-black text-zinc-500 mb-4 uppercase tracking-widest text-center">Without ViralMeter</div>
+                <div className="text-[10px] font-black text-zinc-500 mb-4 uppercase tracking-widest text-center">Without viralmeets</div>
                 <ul className="space-y-4 text-xs text-zinc-400 font-bold">
                   <li className="flex items-center gap-2"><X className="w-4 h-4 text-rose-500/50 shrink-0"/> Guessing ideas</li>
                   <li className="flex items-center gap-2"><X className="w-4 h-4 text-rose-500/50 shrink-0"/> Low reach</li>
@@ -764,7 +780,7 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
               
               <div className="flex-1 bg-rose-500/10 border border-rose-500/30 p-4 rounded-2xl relative overflow-hidden shadow-[0_0_20px_rgba(225,29,72,0.1)]">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/20 blur-2xl rounded-full"></div>
-                <div className="text-[10px] font-black text-rose-400 mb-4 uppercase tracking-widest text-center">With ViralMeter</div>
+                <div className="text-[10px] font-black text-rose-400 mb-4 uppercase tracking-widest text-center">With viralmeets</div>
                 <ul className="space-y-4 text-xs text-zinc-100 font-bold relative z-10">
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0"/> Tested ideas</li>
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400 shrink-0"/> Higher engagement</li>
@@ -797,7 +813,7 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
                 Detecting growth opportunities...
               </motion.p>
               <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: 1.6 } }} exit={{ opacity: 0, y: -10 }} className="text-rose-400 font-bold text-center absolute">
-                Setting up your ViralMeter...
+                Setting up your viralmeets...
               </motion.p>
             </div>
           </motion.div>
@@ -1006,7 +1022,7 @@ function HomeView({
           <div className="flex items-center gap-3 mb-2">
             <Skull className="w-10 h-10 text-rose-500" />
             <h1 className="text-6xl font-black bg-gradient-to-br from-rose-400 to-rose-600 bg-clip-text text-transparent leading-tight tracking-tighter">
-              ViralMeter
+              viralmeets
             </h1>
           </div>
           <p className="text-zinc-400 text-sm font-medium">Know if it’ll hit—before you post.</p>
@@ -1435,7 +1451,7 @@ function SettingsView({ onBack, onLegalClick }: { onBack: () => void, onLegalCli
       </div>
 
       <div className="mt-auto pt-12 text-center">
-        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">© 2026 ViralMeter. All rights reserved.</p>
+        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2">© 2026 viralmeets. All rights reserved.</p>
         <p className="text-[10px] font-bold text-zinc-700">Version 1.0.4 (Stable)</p>
       </div>
     </motion.div>
