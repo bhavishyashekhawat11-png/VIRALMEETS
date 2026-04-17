@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Rocket, Check, Lock, X, Sparkles, Zap, BarChart3, Wand2, 
@@ -15,10 +15,10 @@ interface ComparisonRow {
   isCore?: boolean;
 }
 
-export const PricingPage: React.FC = () => {
+export const PricingPage: React.FC = memo(() => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const comparisonData: ComparisonRow[] = [
+  const comparisonData: ComparisonRow[] = useMemo(() => [
     { 
       feature: "Daily Analysis Limit", 
       explanation: "Control how many ideas you can test daily", 
@@ -122,27 +122,27 @@ export const PricingPage: React.FC = () => {
       free: false, 
       pro: true 
     }
-  ];
+  ], []);
 
-  const visibleRows = isExpanded ? comparisonData : comparisonData.filter(row => row.isCore);
+  const visibleRows = useMemo(() => isExpanded ? comparisonData : comparisonData.filter(row => row.isCore), [isExpanded, comparisonData]);
 
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="p-6 space-y-12 pb-32 pt-32 max-w-4xl mx-auto"
+      className="p-6 space-y-12 pb-32 pt-32 max-w-4xl mx-auto transform-gpu"
     >
       {/* Hero Section */}
-      <div className="text-center space-y-6 pt-4">
+      <div className="text-center space-y-6 pt-4 transform-gpu">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-black uppercase tracking-widest mb-2"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-black uppercase tracking-widest mb-2 transform-gpu"
         >
           <Sparkles className="w-4 h-4" />
           Master the Algorithm
         </motion.div>
-        <h2 className="text-5xl md:text-7xl font-black text-zinc-100 leading-tight tracking-tighter">
+        <h2 className="text-5xl md:text-7xl font-black text-zinc-100 leading-tight tracking-tighter transform-gpu">
           Unlock Viral <br /> Growth 🚀
         </h2>
         <p className="text-zinc-400 text-lg max-w-lg mx-auto leading-relaxed font-medium">
@@ -151,9 +151,9 @@ export const PricingPage: React.FC = () => {
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 transform-gpu">
         {/* Monthly */}
-        <div className="group relative p-8 bg-zinc-900 border border-zinc-800 rounded-[2.5rem] text-left hover:border-zinc-700 transition-all">
+        <div className="group relative p-8 bg-zinc-900 border border-zinc-800 rounded-[2.5rem] text-left hover:border-zinc-700 transition-all transform-gpu">
           <div className="flex justify-between items-start mb-8">
             <div>
               <h4 className="text-xl font-black text-zinc-100 mb-1">Monthly</h4>
@@ -173,13 +173,13 @@ export const PricingPage: React.FC = () => {
               </li>
             ))}
           </ul>
-          <button className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest transition-all">
+          <button className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest transition-all outline-none">
             Get Started
           </button>
         </div>
 
         {/* Yearly */}
-        <div className="group relative p-8 bg-zinc-900 border-2 border-rose-600 rounded-[2.5rem] text-left shadow-[0_0_50px_rgba(225,29,72,0.15)] transition-all">
+        <div className="group relative p-8 bg-zinc-900 border-2 border-rose-600 rounded-[2.5rem] text-left shadow-[0_0_50px_rgba(225,29,72,0.15)] transition-all transform-gpu">
           <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-rose-600 text-white text-xs font-black px-6 py-1.5 rounded-full uppercase tracking-widest">
             Best Value
           </div>
@@ -209,7 +209,7 @@ export const PricingPage: React.FC = () => {
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full py-4 bg-rose-600 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all"
+            className="w-full py-4 bg-rose-600 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all transform-gpu outline-none"
           >
             Go Pro Now 🚀
           </motion.button>
@@ -217,12 +217,12 @@ export const PricingPage: React.FC = () => {
       </div>
 
       {/* Comparison Table */}
-      <div className="space-y-8 pt-12">
+      <div className="space-y-8 pt-12 transform-gpu">
         <div className="flex items-center justify-between px-2">
           <h3 className="text-2xl font-black text-zinc-100 uppercase tracking-tight">Feature Rundown</h3>
         </div>
 
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-[3rem] overflow-hidden backdrop-blur-sm">
+        <div className="bg-zinc-900/50 border border-zinc-800 rounded-[3rem] overflow-hidden backdrop-blur-sm transform-gpu">
           <div className="grid grid-cols-2 border-b border-zinc-800 bg-zinc-950/50">
             <div className="p-6 text-center border-r border-zinc-800">
               <span className="text-xs font-black text-zinc-500 uppercase tracking-widest">Free Plan</span>
@@ -237,11 +237,11 @@ export const PricingPage: React.FC = () => {
               {visibleRows.map((row, i) => (
                 <motion.div 
                   key={row.feature}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="grid grid-cols-2"
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.3, delay: i * 0.02 }}
+                  className="grid grid-cols-2 transform-gpu will-change-[transform,opacity]"
                 >
                   <div className="p-6 border-r border-zinc-800 space-y-2">
                     <div className="flex items-center gap-2">
@@ -277,7 +277,7 @@ export const PricingPage: React.FC = () => {
 
         <button 
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full py-6 flex items-center justify-center gap-3 text-zinc-500 hover:text-zinc-300 text-xs font-black uppercase tracking-widest transition-colors"
+          className="w-full py-6 flex items-center justify-center gap-3 text-zinc-500 hover:text-zinc-300 text-xs font-black uppercase tracking-widest transition-colors outline-none"
         >
           {isExpanded ? (
             <>Less Features <ChevronUp className="w-5 h-5" /></>
@@ -288,8 +288,8 @@ export const PricingPage: React.FC = () => {
       </div>
 
       {/* Trust Elements */}
-      <div className="pt-12 text-center space-y-6">
-        <div className="flex items-center justify-center gap-8 opacity-40 grayscale group-hover:grayscale-0 transition-all">
+      <div className="pt-12 text-center space-y-6 transform-gpu">
+        <div className="flex items-center justify-center gap-8 opacity-40 grayscale group-hover:grayscale-0 transition-all transform-gpu">
           <ShieldCheck className="w-8 h-8" />
           <CreditCard className="w-8 h-8" />
           <Clock className="w-8 h-8" />
@@ -301,4 +301,6 @@ export const PricingPage: React.FC = () => {
       </div>
     </motion.div>
   );
-};
+});
+
+PricingPage.displayName = 'PricingPage';

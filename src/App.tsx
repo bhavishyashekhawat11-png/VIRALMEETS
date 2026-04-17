@@ -1,17 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { analyzeIdeaQuick, analyzeIdeaDetailed, AnalysisResult, UserProfile, generateProfileInsights, ProfileInsights } from './lib/gemini';
-import { RotateCcw, Flame, Skull, AlertTriangle, Sparkles, Share, Dice5, Zap, TrendingUp, ArrowRight, ArrowLeft, Paperclip, Link as LinkIcon, Image as ImageIcon, Video, Clapperboard, X, Trophy, History, Check, RefreshCw, Music, Instagram, Youtube, Brain, Target, BarChart3, Activity, Rocket, Lock, Unlock, ChevronRight, ChevronLeft, FileText, Wand2, AlertCircle, Info } from 'lucide-react';
+import { analyzeIdeaQuick, analyzeIdeaDetailed, AnalysisResult, UserProfile, generateProfileInsights, ProfileInsights, executeQuickAction } from './lib/gemini';
+import { RotateCcw, Flame, Skull, AlertTriangle, Sparkles, Share, Dice5, Zap, TrendingUp, ArrowRight, ArrowLeft, Paperclip, Link as LinkIcon, Image as ImageIcon, Video, Clapperboard, X, Trophy, History, Check, RefreshCw, Music, Instagram, Youtube, Brain, Target, BarChart3, Activity, Rocket, Lock, Unlock, ChevronRight, ChevronLeft, FileText, Wand2, AlertCircle, Info, ShieldCheck, CheckCircle2, CreditCard, Clock, RotateCcw as RotateCcwIcon } from 'lucide-react';
 import { cn } from './lib/utils';
 
-import { DeepAnalysisView } from './components/DeepAnalysisView';
-import { SubscriptionView } from './components/SubscriptionView';
+// Lazy load non-critical components
+const DeepAnalysisView = lazy(() => import('./components/DeepAnalysisView').then(m => ({ default: m.DeepAnalysisView })));
+const SubscriptionView = lazy(() => import('./components/SubscriptionView').then(m => ({ default: m.SubscriptionView })));
+const FeaturesPage = lazy(() => import('./components/FeaturesPage').then(m => ({ default: m.FeaturesPage })));
+const PricingPage = lazy(() => import('./components/PricingPage').then(m => ({ default: m.PricingPage })));
+const AboutPage = lazy(() => import('./components/AboutPage').then(m => ({ default: m.AboutPage })));
+const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ default: m.LegalPage })));
+
 import { LandingPage } from './components/LandingPage';
 import { FeaturesGrid } from './components/FeaturesGrid';
-import { FeaturesPage } from './components/FeaturesPage';
-import { PricingPage } from './components/PricingPage';
-import { AboutPage } from './components/AboutPage';
 import { Navbar } from './components/Navbar';
+import { AppTopBar } from './components/AppTopBar';
 import { AuthModal } from './components/AuthModal';
 import { Background } from './components/Background';
 import { FallingPattern } from './components/ui/falling-pattern';
@@ -21,9 +25,18 @@ import { auth } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext';
-import { LegalPage } from './components/LegalPage';
 import { UpgradeModal } from './components/UpgradeModal';
-import { ShieldCheck, CheckCircle2, CreditCard, Clock, RotateCcw as RotateCcwIcon } from 'lucide-react';
+
+// Loading fallback for lazy components
+const PageLoading = () => (
+  <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh]">
+    <motion.div 
+      animate={{ rotate: 360 }}
+      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+      className="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full"
+    />
+  </div>
+);
 
 const NICHES = ['General', 'Students', 'Fitness', 'Finance', 'Creators'];
 
@@ -66,11 +79,18 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      setUser(authUser);
+      
+      // Protected Route Logic
+      const isAppPage = ['onboarding', 'home', 'deep_analysis', 'manage_subscription', 'result', 'settings'].includes(step);
+      if (!authUser && isAppPage) {
+        setStep('landing');
+        setAuthModalOpen(true);
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [step]);
 
   useEffect(() => {
     const savedProfile = localStorage.getItem('viralmeets_profile');
@@ -169,8 +189,15 @@ export default function App() {
     setLoading(false);
   };
 
-  const rematch = () => {
-    // Logic removed as betterVersion is no longer in AnalysisResult
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setStep('landing');
+      // Clear any local state if necessary
+      reset();
+    } catch (e) {
+      console.error("Logout failed:", e);
+    }
   };
 
   const handleFullReset = () => {
@@ -199,12 +226,19 @@ export default function App() {
         <FallingPattern color="#e11d48" duration={200} blurIntensity="0px" />
       </div>
       
-      <Navbar 
-        onNavigate={(s) => setStep(s as Step)} 
-        onAuth={() => setAuthModalOpen(true)}
-        user={user}
-        onLogout={() => signOut(auth)}
-      />
+      {['landing', 'features', 'pricing', 'about', 'privacy', 'terms', 'refund', 'contact'].includes(step) ? (
+        <Navbar 
+          onNavigate={(s) => setStep(s as Step)} 
+          onAuth={() => setAuthModalOpen(true)}
+          user={user}
+          onLogout={handleLogout}
+        />
+      ) : (
+        <AppTopBar 
+          onLogout={handleLogout} 
+          onNavigateHome={() => setStep('home')}
+        />
+      )}
 
       <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
       
@@ -223,15 +257,21 @@ export default function App() {
         )}
 
         {step === 'features' && (
-          <FeaturesPage key="features" />
+          <Suspense fallback={<PageLoading />}>
+            <FeaturesPage key="features" />
+          </Suspense>
         )}
 
         {step === 'pricing' && (
-          <PricingPage key="pricing" />
+          <Suspense fallback={<PageLoading />}>
+            <PricingPage key="pricing" />
+          </Suspense>
         )}
 
         {step === 'about' && (
-          <AboutPage key="about" />
+          <Suspense fallback={<PageLoading />}>
+            <AboutPage key="about" />
+          </Suspense>
         )}
 
         {step !== 'landing' && !['features', 'pricing', 'about'].includes(step) && (
@@ -240,7 +280,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen w-full max-w-md mx-auto relative flex flex-col"
+            className="min-h-screen w-full max-w-md mx-auto relative flex flex-col transform-gpu will-change-transform"
           >
             <UpgradeModal onManageSubscription={() => setStep('manage_subscription')} />
             <AnimatePresence mode="wait">
@@ -290,19 +330,24 @@ export default function App() {
           />
         )}
         {step === 'deep_analysis' && (
-          <DeepAnalysisView 
-            onBack={() => setStep('home')} 
-            onLegalClick={(s) => setStep(s)}
-          />
+          <Suspense fallback={<PageLoading />}>
+            <DeepAnalysisView 
+              onBack={() => setStep('home')} 
+              onLegalClick={(s) => setStep(s)}
+            />
+          </Suspense>
         )}
         {step === 'manage_subscription' && (
-          <SubscriptionView onBack={() => setStep('settings')} />
+          <Suspense fallback={<PageLoading />}>
+            <SubscriptionView onBack={() => setStep('settings')} />
+          </Suspense>
         )}
         {step === 'privacy' && (
-          <LegalPage 
-            title="Privacy Policy" 
-            onBack={() => setStep('home')}
-            content={`At ViralMeets, we respect your privacy and are committed to protecting your personal information.
+          <Suspense fallback={<PageLoading />}>
+            <LegalPage 
+              title="Privacy Policy" 
+              onBack={() => setStep('home')}
+              content={`At ViralMeets, we respect your privacy and are committed to protecting your personal information.
 
 ### 1. Information We Collect
 
@@ -352,13 +397,15 @@ You can:
 ### 6. Updates
 
 This policy may be updated periodically. Continued use of the app means you accept the updated policy.`}
-          />
+            />
+          </Suspense>
         )}
         {step === 'terms' && (
-          <LegalPage 
-            title="Terms & Conditions" 
-            onBack={() => setStep('home')}
-            content={`By using ViralMeets, you agree to the following terms:
+          <Suspense fallback={<PageLoading />}>
+            <LegalPage 
+              title="Terms & Conditions" 
+              onBack={() => setStep('home')}
+              content={`By using ViralMeets, you agree to the following terms:
 
 ---
 
@@ -415,13 +462,15 @@ We are not liable for:
 ### 7. Updates to Terms
 
 Terms may change over time. Continued use means acceptance of updated terms.`}
-          />
+            />
+          </Suspense>
         )}
         {step === 'refund' && (
-          <LegalPage 
-            title="Refund Policy" 
-            onBack={() => setStep('home')}
-            content={`All purchases are **final and non-refundable**.
+          <Suspense fallback={<PageLoading />}>
+            <LegalPage 
+              title="Refund Policy" 
+              onBack={() => setStep('home')}
+              content={`All purchases are **final and non-refundable**.
 
 Since ViralMeets provides instant digital access to premium features, refunds cannot be issued once access is granted.
 
@@ -435,13 +484,15 @@ Refunds may be considered only if:
 * Duplicate payment occurs
 
 Requests must be made within **48 hours** of purchase.`}
-          />
+            />
+          </Suspense>
         )}
         {step === 'contact' && (
-          <LegalPage 
-            title="Contact Us" 
-            onBack={() => setStep('home')}
-            content={`We’re here to help and support you at every step of your journey with ViralMeets.
+          <Suspense fallback={<PageLoading />}>
+            <LegalPage 
+              title="Contact Us" 
+              onBack={() => setStep('home')}
+              content={`We’re here to help and support you at every step of your journey with ViralMeets.
 
 ---
 
@@ -494,7 +545,8 @@ For faster support:
 
 * Clearly describe your issue
 * Include screenshots if possible`}
-          />
+            />
+          </Suspense>
         )}
         {step === 'loading' && <LoadingView key="loading" />}
         {step === 'resetting' && (
@@ -517,7 +569,7 @@ For faster support:
             mediaFile={mediaFile} 
             mediaContext={mediaContext} 
             onReset={reset} 
-            onRematch={rematch} 
+            onRematch={() => {}} 
             bestScore={bestScore} 
             analysisStage={analysisStage} 
             error={error} 
@@ -543,7 +595,7 @@ For faster support:
   );
 }
 
-function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: string; onComplete: (profile: UserProfile) => void, onLegalClick: (s: Step) => void, initialProfile?: UserProfile | null }) {
+const OnboardingView = memo(({ onComplete, onLegalClick, initialProfile }: { key?: string; onComplete: (profile: UserProfile) => void, onLegalClick: (s: Step) => void, initialProfile?: UserProfile | null }) => {
   const [step, setStep] = useState(initialProfile ? 1 : 0);
   const [profile, setProfile] = useState<Partial<UserProfile>>(initialProfile || { categories: [] });
   const [customCategory, setCustomCategory] = useState('');
@@ -939,9 +991,11 @@ function OnboardingView({ onComplete, onLegalClick, initialProfile }: { key?: st
       </AnimatePresence>
     </motion.div>
   );
-}
+});
 
-function HomeView({
+OnboardingView.displayName = 'OnboardingView';
+
+const HomeView = memo(({
   idea,
   setIdea,
   mediaContext,
@@ -992,7 +1046,7 @@ function HomeView({
   onResetOnboarding: () => void;
   onLegalClick: (step: Step) => void;
   onEditPreferences: () => void;
-}) {
+}) => {
   const { isPro } = useSubscription();
   const [showMedia, setShowMedia] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
@@ -1031,7 +1085,7 @@ function HomeView({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex-1 flex flex-col p-6 pt-12"
+      className="flex-1 flex flex-col p-6 pt-12 transform-gpu will-change-transform"
     >
       <div className="flex-1 flex flex-col justify-center">
         <div className="flex flex-col gap-4 mb-6">
@@ -1361,9 +1415,11 @@ function HomeView({
       <Footer onLegalClick={onLegalClick} />
     </motion.div>
   );
-}
+});
 
-function LoadingView(_props: { key?: string }) {
+HomeView.displayName = 'HomeView';
+
+const LoadingView = memo((_props: { key?: string }) => {
   const [msgIndex, setMsgIndex] = useState(0);
 
   useEffect(() => {
@@ -1378,7 +1434,7 @@ function LoadingView(_props: { key?: string }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex-1 flex flex-col items-center justify-center p-6"
+      className="flex-1 flex flex-col items-center justify-center p-6 transform-gpu will-change-transform"
     >
       <div className="relative w-24 h-24 mb-8">
         <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
@@ -1404,9 +1460,11 @@ function LoadingView(_props: { key?: string }) {
       </AnimatePresence>
     </motion.div>
   );
-}
+});
 
-function BottomNav({ currentStep, onNavigate }: { currentStep: Step, onNavigate: (s: Step) => void }) {
+LoadingView.displayName = 'LoadingView';
+
+const BottomNav = memo(({ currentStep, onNavigate }: { currentStep: Step, onNavigate: (s: Step) => void }) => {
   const tabs = [
     { id: 'home', label: 'ViralMeets', icon: RefreshCw },
     { id: 'deep_analysis', label: 'Deep Analysis', icon: Clapperboard },
@@ -1434,9 +1492,11 @@ function BottomNav({ currentStep, onNavigate }: { currentStep: Step, onNavigate:
       })}
     </div>
   );
-}
+});
 
-function SettingsView({ onBack, onLegalClick }: { onBack: () => void, onLegalClick: (s: Step) => void }) {
+BottomNav.displayName = 'BottomNav';
+
+const SettingsView = memo(({ onBack, onLegalClick }: { onBack: () => void, onLegalClick: (s: Step) => void }) => {
   const sections = [
     { id: 'privacy', label: 'Privacy Policy', icon: ShieldCheck },
     { id: 'terms', label: 'Terms & Conditions', icon: CheckCircle2 },
@@ -1445,7 +1505,7 @@ function SettingsView({ onBack, onLegalClick }: { onBack: () => void, onLegalCli
   ];
 
   return (
-    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col p-6 pt-12 bg-zinc-950 pb-32">
+    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col p-6 pt-12 bg-zinc-950 pb-32 transform-gpu will-change-transform">
       <div className="mb-8">
         <h2 className="text-3xl font-black text-zinc-100 mb-2">Settings</h2>
         <p className="text-zinc-400 text-sm">Legal, support, and account preferences</p>
@@ -1507,13 +1567,11 @@ function SettingsView({ onBack, onLegalClick }: { onBack: () => void, onLegalCli
       </div>
     </motion.div>
   );
-}
+});
 
+SettingsView.displayName = 'SettingsView';
 
-
-import { executeQuickAction } from './lib/gemini';
-
-function ResultView({ result, idea, mediaFile, mediaContext, onReset, onRematch, bestScore, analysisStage, error, onLegalClick, onEditPreferences }: { key?: string; result: AnalysisResult; idea: string; mediaFile: any; mediaContext: string; onReset: () => void; onRematch: () => void; bestScore: number; analysisStage: 'quick' | 'detailed'; error?: string | null; onLegalClick: (s: Step) => void; onEditPreferences: () => void }) {
+const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRematch, bestScore, analysisStage, error, onLegalClick, onEditPreferences }: { key?: string; result: AnalysisResult; idea: string; mediaFile: any; mediaContext: string; onReset: () => void; onRematch: () => void; bestScore: number; analysisStage: 'quick' | 'detailed'; error?: string | null; onLegalClick: (s: Step) => void; onEditPreferences: () => void }) => {
   const { isPro, setShowUpgradeModal } = useSubscription();
   const [showAllTags, setShowAllTags] = useState(false);
   const [activeHookIndex, setActiveHookIndex] = useState(0);
@@ -1943,9 +2001,11 @@ function ResultView({ result, idea, mediaFile, mediaContext, onReset, onRematch,
       </div>
     </div>
   );
-}
+});
 
-function SwipeableHooks({ hooks }: { hooks: string[] }) {
+ResultView.displayName = 'ResultView';
+
+const SwipeableHooks = memo(({ hooks }: { hooks: string[] }) => {
   const [stack, setStack] = useState(hooks);
   const handleDragEnd = (event: any, info: any, hook: string) => {
     if (Math.abs(info.offset.x) > 50) {
@@ -1993,4 +2053,6 @@ function SwipeableHooks({ hooks }: { hooks: string[] }) {
       </AnimatePresence>
     </div>
   );
-}
+});
+
+SwipeableHooks.displayName = 'SwipeableHooks';

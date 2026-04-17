@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Video, ArrowLeft, Upload, Play, Pause, Eye, MousePointerClick, 
@@ -13,7 +13,7 @@ import { analyzeVideoIntelligence, AnalysisResult } from '../lib/gemini';
 import { Footer } from './Footer';
 import { Step } from '../types';
 
-export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void, onLegalClick: (s: Step) => void }) {
+export const DeepAnalysisView = memo(({ onBack, onLegalClick }: { onBack: () => void, onLegalClick: (s: Step) => void }) => {
   const { isPro, setShowUpgradeModal, checkLimit, incrementUsage } = useSubscription();
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -121,25 +121,25 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="flex-1 flex flex-col p-6 pt-12"
+      exit={{ opacity: 0, y: -15 }}
+      className="flex-1 flex flex-col p-6 pt-12 transform-gpu"
     >
       <button 
         onClick={onBack}
-        className="absolute top-6 left-6 text-zinc-500 hover:text-zinc-300 transition-colors z-[60]"
+        className="absolute top-6 left-6 text-zinc-500 hover:text-zinc-300 transition-colors z-[60] outline-none"
       >
         <ArrowLeft className="w-6 h-6" />
       </button>
 
       {stage === 'upload' && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 border border-rose-500/20">
+        <div className="flex-1 flex flex-col items-center justify-center text-center transform-gpu">
+          <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mb-6 border border-rose-500/20 transform-gpu">
             <Video className="w-8 h-8 text-rose-500" />
           </div>
-          <h2 className="text-3xl font-black text-zinc-100 mb-4 tracking-tight">Viral Intelligence Engine</h2>
-          <p className="text-zinc-400 text-sm mb-8 max-w-xs leading-relaxed">
+          <h2 className="text-3xl font-black text-zinc-100 mb-4 tracking-tight transform-gpu">Viral Intelligence Engine</h2>
+          <p className="text-zinc-400 text-sm mb-8 max-w-xs leading-relaxed font-medium">
             Predict performance, detect viral gaps, and optimize your content for maximum reach.
           </p>
           
@@ -153,9 +153,9 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
           
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="w-full max-w-xs bg-zinc-900 border-2 border-dashed border-zinc-700 hover:border-rose-500/50 rounded-[2.5rem] p-10 flex flex-col items-center justify-center gap-4 transition-all group shadow-2xl"
+            className="w-full max-w-xs bg-zinc-900 border-2 border-dashed border-zinc-700 hover:border-rose-500/50 rounded-[2.5rem] p-10 flex flex-col items-center justify-center gap-4 transition-all group shadow-2xl transform-gpu outline-none"
           >
-            <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center group-hover:bg-rose-500/10 transition-colors">
+            <div className="w-12 h-12 bg-zinc-800 rounded-2xl flex items-center justify-center group-hover:bg-rose-500/10 transition-colors transform-gpu">
               <Upload className="w-6 h-6 text-zinc-500 group-hover:text-rose-400" />
             </div>
             <span className="text-sm font-bold text-zinc-300">Select Video File</span>
@@ -170,23 +170,23 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
       )}
 
       {stage === 'analyzing' && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-zinc-800 border-t-rose-500 rounded-full animate-spin mb-8"></div>
-            <Brain className="w-8 h-8 text-rose-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        <div className="flex-1 flex flex-col items-center justify-center text-center transform-gpu">
+          <div className="relative transform-gpu">
+            <div className="w-20 h-20 border-4 border-zinc-800 border-t-rose-500 rounded-full animate-spin mb-8 transform-gpu"></div>
+            <Brain className="w-8 h-8 text-rose-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse transform-gpu" />
           </div>
-          <h3 className="text-2xl font-black text-zinc-100 mb-2">Analyzing Creator DNA...</h3>
-          <p className="text-zinc-400 text-sm max-w-[200px]">Extracting visual hooks, pacing, and algorithm triggers</p>
+          <h3 className="text-2xl font-black text-zinc-100 mb-2 transform-gpu">Analyzing Creator DNA...</h3>
+          <p className="text-zinc-400 text-sm max-w-[200px] font-medium">Extracting visual hooks, pacing, and algorithm triggers</p>
         </div>
       )}
 
       {stage === 'scroll_test' && (
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="text-center mb-8">
+        <div className="flex-1 flex flex-col items-center justify-center transform-gpu">
+          <div className="text-center mb-8 transform-gpu">
             <h3 className="text-2xl font-black text-zinc-100 mb-2">Scroll Test Simulation</h3>
-            <p className="text-zinc-400 text-sm">Be honest: would you keep watching or scroll?</p>
+            <p className="text-zinc-400 text-sm font-medium">Be honest: would you keep watching or scroll?</p>
           </div>
-          <div className="relative w-full max-w-sm aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden border border-zinc-800 shadow-2xl mb-8">
+          <div className="relative w-full max-w-sm aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden border border-zinc-800 shadow-2xl mb-8 transform-gpu">
             {videoUrl && (
               <video 
                 ref={videoRef}
@@ -202,17 +202,17 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
                 }}
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-8">
-              <div className="flex gap-3">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-8 transform-gpu">
+              <div className="flex gap-3 transform-gpu">
                 <button 
                   onClick={() => handleScrollTest('keep')}
-                  className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-900/20"
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-900/20 outline-none transform-gpu"
                 >
                   <Eye className="w-5 h-5" /> Keep
                 </button>
                 <button 
                   onClick={() => handleScrollTest('scroll')}
-                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 border border-zinc-700"
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 border border-zinc-700 outline-none transform-gpu"
                 >
                   <MousePointerClick className="w-5 h-5" /> Scroll
                 </button>
@@ -227,34 +227,35 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center"
+          className="fixed inset-0 z-[100] bg-zinc-950/80 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center transform-gpu"
         >
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-6 max-w-[320px] w-full relative overflow-hidden">
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-6 max-w-[320px] w-full relative overflow-hidden transform-gpu">
             {/* Background Glow */}
-            <div className="absolute -top-24 -left-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full" />
-            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full" />
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full transform-gpu" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full transform-gpu" />
 
-            <div className="relative">
-              <div className="w-16 h-16 border-2 border-rose-500/20 rounded-full animate-ping absolute inset-0" />
-              <div className="w-16 h-16 border-2 border-rose-500 rounded-full flex items-center justify-center relative bg-zinc-900">
-                <Sparkles className="w-8 h-8 text-rose-500 animate-pulse" />
+            <div className="relative transform-gpu">
+              <div className="w-16 h-16 border-2 border-rose-500/20 rounded-full animate-ping absolute inset-0 transform-gpu" />
+              <div className="w-16 h-16 border-2 border-rose-500 rounded-full flex items-center justify-center relative bg-zinc-900 transform-gpu">
+                <Sparkles className="w-8 h-8 text-rose-500 animate-pulse transform-gpu" />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <h4 className="text-lg font-black text-zinc-100 uppercase tracking-tight">Analyzing Your Content</h4>
+            <div className="space-y-2 transform-gpu">
+              <h4 className="text-lg font-black text-zinc-100 uppercase tracking-tight transform-gpu">Analyzing Your Content</h4>
               <p className="text-[10px] text-zinc-500 leading-relaxed font-bold uppercase tracking-widest">Our AI is running deep viral analysis. This takes a few seconds...</p>
             </div>
 
-            <div className="w-full space-y-4 pt-4 border-t border-zinc-800/50">
-              <div className="space-y-2">
+            <div className="w-full space-y-4 pt-4 border-t border-zinc-800/50 transform-gpu">
+              <div className="space-y-2 transform-gpu">
                 <AnimatePresence mode="wait">
                   <motion.p 
                     key={loadingStep}
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
-                    className="text-[10px] font-black text-rose-500 uppercase tracking-widest"
+                    transition={{ duration: 0.2 }}
+                    className="text-[10px] font-black text-rose-500 uppercase tracking-widest transform-gpu"
                   >
                     {[
                       "Analyzing your hook...",
@@ -265,26 +266,28 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
                     ][loadingStep]}
                   </motion.p>
                 </AnimatePresence>
-                <div className="flex items-center justify-center gap-2">
-                  <div className="h-1 flex-1 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="flex items-center justify-center gap-2 transform-gpu">
+                  <div className="h-1 flex-1 bg-zinc-800 rounded-full overflow-hidden transform-gpu">
                     <motion.div 
                       initial={{ width: 0 }}
                       animate={{ width: `${(loadingStep + 1) * 20}%` }}
-                      className="h-full bg-rose-500"
+                      transition={{ duration: 0.5 }}
+                      className="h-full bg-rose-500 transform-gpu"
                     />
                   </div>
                   <span className="text-[9px] font-black text-zinc-600 uppercase tracking-widest shrink-0">Step {loadingStep + 1}/5</span>
                 </div>
               </div>
 
-              <div className="pt-4">
+              <div className="pt-4 transform-gpu">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={loadingStep}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="bg-zinc-950/50 p-3 rounded-2xl border border-zinc-800/50"
+                    transition={{ duration: 0.2 }}
+                    className="bg-zinc-950/50 p-3 rounded-2xl border border-zinc-800/50 transform-gpu"
                   >
                     <span className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-1">Micro Insight</span>
                     <p className="text-[10px] text-zinc-400 font-medium leading-relaxed">
@@ -305,44 +308,44 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
       )}
 
       {stage === 'results' && (
-        <div className="flex-1 flex flex-col pb-8 overflow-y-auto h-full relative scroll-smooth no-scrollbar">
+        <div className="flex-1 flex flex-col pb-8 overflow-y-auto h-full relative scroll-smooth no-scrollbar transform-gpu">
           {/* 1. CONTENT PREVIEW (TOP) */}
-          <div className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-md pb-4 mb-6 border-b border-zinc-900">
-             <div className="flex items-center justify-between mb-4">
-                 <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-                    <h2 className="text-lg font-black text-zinc-100 uppercase tracking-tighter">Viral Intelligence</h2>
+          <div className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-md pb-4 mb-6 border-b border-zinc-900 transform-gpu">
+             <div className="flex items-center justify-between mb-4 transform-gpu">
+                 <div className="flex items-center gap-2 transform-gpu">
+                    <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse transform-gpu" />
+                    <h2 className="text-lg font-black text-zinc-100 uppercase tracking-tighter transform-gpu">Viral Intelligence</h2>
                  </div>
-                 {isFetchingAnalysis && <RefreshCw className="w-4 h-4 text-rose-500 animate-spin" />}
+                 {isFetchingAnalysis && <RefreshCw className="w-4 h-4 text-rose-500 animate-spin transform-gpu" />}
              </div>
-             <div className="w-full h-40 bg-black rounded-3xl overflow-hidden border border-zinc-800 flex items-center justify-center relative shadow-inner">
-               {videoUrl && <video src={videoUrl} className="w-full h-full object-contain" controls />}
+             <div className="w-full h-40 bg-black rounded-3xl overflow-hidden border border-zinc-800 flex items-center justify-center relative shadow-inner transform-gpu">
+               {videoUrl && <video src={videoUrl} className="w-full h-full object-contain transform-gpu" controls />}
              </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-8 transform-gpu">
             {/* 2. VIRAL SCORE (HERO SECTION) */}
-            <section className="text-center py-4">
+            <section className="text-center py-4 transform-gpu">
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="inline-block relative"
+                className="inline-block relative transform-gpu"
               >
-                <div className="text-6xl font-black text-white tracking-tighter mb-1">
+                <div className="text-6xl font-black text-white tracking-tighter mb-1 transform-gpu">
                   {analysisData ? (analysisData.score / 10).toFixed(1) : "?.?"}
                   <span className="text-2xl text-zinc-500 ml-1">/10</span>
                 </div>
-                <div className="text-xs font-black text-rose-500 uppercase tracking-[0.2em]">Viral Potential</div>
+                <div className="text-xs font-black text-rose-500 uppercase tracking-[0.2em] transform-gpu">Viral Potential</div>
               </motion.div>
 
-              <div className="grid grid-cols-2 gap-3 mt-8">
+              <div className="grid grid-cols-2 gap-3 mt-8 transform-gpu">
                 {[
                   { label: 'Hook Strength', val: analysisData?.score_breakdown?.hook_strength || 0, icon: Zap, color: 'text-amber-400' },
                   { label: 'Retention', val: analysisData?.score_breakdown?.engagement_potential || 0, icon: Activity, color: 'text-emerald-400' },
                   { label: 'Shareability', val: analysisData?.score_breakdown?.trend_alignment || 0, icon: Share2, color: 'text-blue-400' },
                   { label: 'Trend Match', val: analysisData?.score_breakdown?.clarity || 0, icon: Flame, color: 'text-rose-400' },
                 ].map((item, i) => (
-                  <div key={i} className="bg-zinc-900/50 border border-zinc-800 p-3 rounded-2xl flex flex-col items-center">
+                  <div key={i} className="bg-zinc-900/50 border border-zinc-800 p-3 rounded-2xl flex flex-col items-center transform-gpu">
                     <item.icon className={cn("w-4 h-4 mb-2", item.color)} />
                     <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">{item.label}</div>
                     <div className="text-sm font-black text-white">
@@ -355,12 +358,12 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
             </section>
 
             {/* 3. FIRST 3 SECONDS ANALYZER */}
-            <section className="bg-zinc-900 border border-zinc-800 p-6 rounded-[2rem] relative overflow-hidden">
-              <h3 className="text-sm font-black text-zinc-100 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <section className="bg-zinc-900 border border-zinc-800 p-6 rounded-[2rem] relative overflow-hidden transform-gpu">
+              <h3 className="text-sm font-black text-zinc-100 uppercase tracking-widest mb-4 flex items-center gap-2 transform-gpu">
                 <Clock className="w-4 h-4 text-rose-500" /> First 3s Analyzer
               </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+              <div className="space-y-4 transform-gpu">
+                <div className="flex items-center justify-between transform-gpu">
                   <span className="text-xs font-bold text-zinc-400">Hook Status</span>
                   <span className={cn(
                     "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
@@ -371,7 +374,7 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
                     {analysisData?.first_3s_analysis?.status || "Analyzing..."}
                   </span>
                 </div>
-                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/50">
+                <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/50 transform-gpu">
                   <p className="text-xs text-zinc-300 font-medium leading-relaxed">
                     {analysisData?.first_3s_analysis?.issue || "Detecting hook issues..."}
                   </p>
@@ -380,8 +383,8 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
                 {!isPro && renderLockedOverlay("Pro Insight Locked", "Get detailed explanation + improvement suggestions.")}
                 
                 {isPro && analysisData?.first_3s_analysis?.pro_tip && (
-                  <div className="mt-4 p-4 bg-rose-500/5 border border-rose-500/20 rounded-2xl">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="mt-4 p-4 bg-rose-500/5 border border-rose-500/20 rounded-2xl transform-gpu">
+                    <div className="flex items-center gap-2 mb-2 transform-gpu">
                       <Sparkles className="w-3 h-3 text-rose-500" />
                       <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Pro Tip</span>
                     </div>
@@ -771,4 +774,6 @@ export function DeepAnalysisView({ onBack, onLegalClick }: { onBack: () => void,
       <Footer onLegalClick={onLegalClick} />
     </motion.div>
   );
-}
+});
+
+DeepAnalysisView.displayName = 'DeepAnalysisView';

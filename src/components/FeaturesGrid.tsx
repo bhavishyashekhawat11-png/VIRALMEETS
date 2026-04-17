@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { motion } from 'motion/react';
 import { Eye, BarChart3, Brain, Dna, Wand2, TrendingUp, Target } from 'lucide-react';
 
@@ -47,21 +47,25 @@ const features = [
   }
 ];
 
-export const FeaturesGrid: React.FC = () => {
+export const FeaturesGrid: React.FC = memo(() => {
   return (
     <section className="py-32 px-6 max-w-7xl mx-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-x-auto pb-8 md:pb-0 scrollbar-hide">
         {features.map((f, i) => (
           <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 20 }}
+            key={f.title}
+            initial={{ opacity: 0, y: 15 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1 }}
-            whileHover={{ y: -10, scale: 1.02 }}
-            className="group bg-zinc-900/50 border border-zinc-800/50 p-8 rounded-[2rem] hover:border-rose-500/30 hover:shadow-[0_0_30px_rgba(225,29,72,0.1)] transition-all"
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ 
+              duration: 0.4,
+              delay: i * 0.05,
+              ease: "easeOut"
+            }}
+            whileHover={{ y: -5, scale: 1.01 }}
+            className="group bg-zinc-900/50 border border-zinc-800/50 p-8 rounded-[2rem] hover:border-rose-500/30 hover:shadow-[0_0_30px_rgba(225,29,72,0.1)] transition-all transform-gpu will-change-transform"
           >
-            <div className={`w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+            <div className={`w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform transform-gpu`}>
               <f.icon className={`w-6 h-6 ${f.color}`} />
             </div>
             <h3 className="text-xl font-black text-white mb-2">{f.title}</h3>
@@ -71,4 +75,6 @@ export const FeaturesGrid: React.FC = () => {
       </div>
     </section>
   );
-};
+});
+
+FeaturesGrid.displayName = 'FeaturesGrid';

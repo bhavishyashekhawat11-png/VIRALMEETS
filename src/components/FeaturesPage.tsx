@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { motion } from 'motion/react';
 import { Eye, BarChart3, Brain, Dna, Wand2, TrendingUp, Target } from 'lucide-react';
 
@@ -47,13 +47,13 @@ const detailedFeatures = [
   }
 ];
 
-export const FeaturesPage: React.FC = () => {
+export const FeaturesPage: React.FC = memo(() => {
   return (
     <div className="pt-32 pb-20 px-6 max-w-5xl mx-auto">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-20"
+        className="text-center mb-20 transform-gpu"
       >
         <h1 className="text-5xl font-black text-white mb-6">Powerful Features</h1>
         <p className="text-xl text-zinc-400 font-medium">Everything you need to master the algorithm.</p>
@@ -62,11 +62,11 @@ export const FeaturesPage: React.FC = () => {
       <div className="space-y-12">
         {detailedFeatures.map((f, i) => (
           <motion.div
-            key={i}
-            initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            className="flex flex-col md:flex-row gap-8 items-center bg-zinc-900/30 border border-zinc-800/50 p-10 rounded-[2.5rem]"
+            key={f.title}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            className="flex flex-col md:flex-row gap-8 items-center bg-zinc-900/30 border border-zinc-800/50 p-10 rounded-[2.5rem] transform-gpu will-change-transform"
           >
             <div className="w-20 h-20 shrink-0 rounded-3xl bg-zinc-800 flex items-center justify-center">
               <f.icon className={`w-10 h-10 ${f.color}`} />
@@ -80,4 +80,6 @@ export const FeaturesPage: React.FC = () => {
       </div>
     </div>
   );
-};
+});
+
+FeaturesPage.displayName = 'FeaturesPage';

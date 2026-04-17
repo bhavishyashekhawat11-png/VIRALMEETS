@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown } from 'lucide-react';
 
@@ -45,29 +45,30 @@ const faqs = [
   }
 ];
 
-export const FAQ: React.FC = () => {
+export const FAQ: React.FC = memo(() => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <section className="py-32 px-6 max-w-3xl mx-auto">
-      <h2 className="text-4xl font-black text-white text-center mb-16">Frequently Asked Questions</h2>
+      <h2 className="text-4xl font-black text-white text-center mb-16 transform-gpu">Frequently Asked Questions</h2>
       <div className="space-y-4">
         {faqs.map((faq, i) => (
-          <div key={i} className="border-b border-zinc-800/50">
+          <div key={i} className="border-b border-zinc-800/50 transform-gpu">
             <button
               onClick={() => setOpenIndex(openIndex === i ? null : i)}
-              className="w-full py-6 flex items-center justify-between text-left group"
+              className="w-full py-6 flex items-center justify-between text-left group outline-none"
             >
               <span className="text-lg font-bold text-zinc-200 group-hover:text-white transition-colors">{faq.q}</span>
-              <ChevronDown className={`w-5 h-5 text-zinc-500 transition-transform ${openIndex === i ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-5 h-5 text-zinc-500 transition-transform transform-gpu ${openIndex === i ? 'rotate-180' : ''}`} />
             </button>
-            <AnimatePresence>
+            <AnimatePresence initial={false}>
               {openIndex === i && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="overflow-hidden transform-gpu will-change-[height,opacity]"
                 >
                   <p className="pb-6 text-zinc-400 font-medium leading-relaxed">{faq.a}</p>
                 </motion.div>
@@ -78,4 +79,6 @@ export const FAQ: React.FC = () => {
       </div>
     </section>
   );
-};
+});
+
+FAQ.displayName = 'FAQ';

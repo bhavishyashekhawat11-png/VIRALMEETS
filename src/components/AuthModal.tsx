@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from '../lib/firebase';
 import { 
@@ -7,11 +7,9 @@ import {
   updateProfile,
   signInWithPopup,
   GoogleAuthProvider,
-  sendPasswordResetEmail,
-  RecaptchaVerifier,
-  signInWithPhoneNumber
+  sendPasswordResetEmail
 } from 'firebase/auth';
-import { X, Mail, Lock, User, ArrowRight, Sparkles, Chrome, Phone, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User, ArrowRight, Sparkles, Chrome, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface AuthModalProps {
@@ -19,17 +17,14 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-type AuthMethod = 'email' | 'phone';
+type AuthMethod = 'email';
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [method, setMethod] = useState<AuthMethod>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +38,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setIsLogin(true);
       setShowForgotPassword(false);
       setMethod('email');
-      setVerificationId(null);
     }
   }, [isOpen]);
 
@@ -104,75 +98,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const setupRecaptcha = () => {
-    if (!(window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': () => {}
-      });
-    }
-  };
-
-  const handlePhoneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    try {
-      if (!verificationId) {
-        setupRecaptcha();
-        const verifier = (window as any).recaptchaVerifier;
-        const confirmationResult = await signInWithPhoneNumber(auth, phone, verifier);
-        setVerificationId(confirmationResult.verificationId);
-        (window as any).confirmationResult = confirmationResult;
-        setSuccess('OTP sent to your phone.');
-      } else {
-        const result = await (window as any).confirmationResult.confirm(otp);
-        console.log('User signed in:', result.user);
-        onClose();
-      }
-    } catch (err: any) {
-      setError(err.message);
-      if (err.code === 'auth/invalid-phone-number') {
-        setError('Invalid phone number format. Use E.164 (e.g., +11234567890)');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transform-gpu">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm transform-gpu"
           />
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl overflow-hidden"
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl overflow-hidden transform-gpu will-change-[transform,opacity]"
           >
             <div id="recaptcha-container"></div>
             
             {/* Background Glow */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[80px] rounded-full" />
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[80px] rounded-full transform-gpu" />
             
             <button 
               onClick={onClose}
-              className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors"
+              className="absolute top-6 right-6 text-zinc-500 hover:text-white transition-colors outline-none"
             >
               <X className="w-6 h-6" />
             </button>
 
-            <div className="mb-8 text-center">
-              <div className="inline-flex items-center justify-center p-3 bg-rose-500/10 rounded-2xl mb-4">
+            <div className="mb-8 text-center transform-gpu">
+              <div className="inline-flex items-center justify-center p-3 bg-rose-500/10 rounded-2xl mb-4 transform-gpu">
                 <Sparkles className="w-6 h-6 text-rose-500" />
               </div>
               <h2 className="text-3xl font-black text-white tracking-tighter">
@@ -185,30 +142,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </p>
             </div>
 
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => { setMethod('email'); setError(null); setShowForgotPassword(false); }}
-                className={cn(
-                  "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                  method === 'email' ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"
-                )}
-              >
-                Email
-              </button>
-              <button
-                onClick={() => { setMethod('phone'); setError(null); setShowForgotPassword(false); }}
-                className={cn(
-                  "flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                  method === 'phone' ? "bg-zinc-800 text-white" : "text-zinc-500 hover:text-white"
-                )}
-              >
-                Phone
-              </button>
-            </div>
-
-            {method === 'email' ? (
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                {!isLogin && !showForgotPassword && (
+            <form onSubmit={handleEmailSubmit} className="space-y-4 transform-gpu">
+              {!isLogin && !showForgotPassword && (
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
                     <input
@@ -217,7 +152,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all font-medium"
                     />
                   </div>
                 )}
@@ -230,7 +165,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all font-medium"
                   />
                 </div>
 
@@ -243,7 +178,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all font-medium"
                     />
                   </div>
                 )}
@@ -253,7 +188,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     <button
                       type="button"
                       onClick={() => { setShowForgotPassword(true); setError(null); }}
-                      className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors"
+                      className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-400 transition-colors outline-none"
                     >
                       Forgot Password?
                     </button>
@@ -261,14 +196,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 )}
 
                 {error && (
-                  <div className="flex items-center gap-2 text-rose-500 text-xs font-bold bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
+                  <div className="flex items-center gap-2 text-rose-500 text-xs font-bold bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 transform-gpu">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{error}</span>
                   </div>
                 )}
 
                 {success && (
-                  <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
+                  <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 transform-gpu">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>{success}</span>
                   </div>
@@ -278,83 +213,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   disabled={loading}
-                  className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all disabled:opacity-50"
+                  className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all disabled:opacity-50 transform-gpu outline-none"
                 >
                   {loading ? 'Processing...' : (showForgotPassword ? 'Send Reset Link' : (isLogin ? 'Login' : 'Create Account'))}
                   {!loading && <ArrowRight className="w-5 h-5" />}
                 </motion.button>
               </form>
-            ) : (
-              <form onSubmit={handlePhoneSubmit} className="space-y-4">
-                {!verificationId ? (
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-                    <input
-                      type="tel"
-                      placeholder="+1 123 456 7890"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all"
-                    />
-                  </div>
-                ) : (
-                  <div className="animate-in fade-in slide-in-from-top-2">
-                    <div className="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-2 mb-4 text-center">
-                      Enter 6-digit OTP sent to {phone}
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="000000"
-                      maxLength={6}
-                      autoFocus
-                      required
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 px-4 text-center text-2xl font-black tracking-[0.5em] text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all"
-                    />
-                  </div>
-                )}
-
-                {error && (
-                  <div className="flex items-center gap-2 text-rose-500 text-xs font-bold bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                )}
-
-                {success && (
-                  <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
-                    <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>{success}</span>
-                  </div>
-                )}
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  disabled={loading}
-                  className="w-full bg-rose-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(225,29,72,0.3)] transition-all disabled:opacity-50 mt-4"
-                >
-                  {loading ? 'Processing...' : (!verificationId ? 'Send OTP' : 'Verify & Continue')}
-                  {!loading && <ArrowRight className="w-5 h-5" />}
-                </motion.button>
-                
-                {verificationId && (
-                  <button
-                    type="button"
-                    onClick={() => { setVerificationId(null); setOtp(''); setSuccess(null); }}
-                    className="w-full text-zinc-500 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors py-2"
-                  >
-                    Change Phone Number
-                  </button>
-                )}
-              </form>
-            )}
 
             {!showForgotPassword && (
               <>
-                <div className="relative my-8">
+                <div className="relative my-8 transform-gpu">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-zinc-800"></div>
                   </div>
@@ -368,7 +236,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   whileTap={{ scale: 0.98 }}
                   disabled={loading}
                   onClick={handleGoogleLogin}
-                  className="w-full bg-zinc-950 border border-zinc-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc-900 transition-all"
+                  className="w-full bg-zinc-950 border border-zinc-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc900 transition-all transform-gpu outline-none"
                 >
                   <Chrome className="w-5 h-5 text-rose-500" />
                   Google Account
@@ -376,7 +244,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </>
             )}
 
-            <div className="mt-8 text-center">
+            <div className="mt-8 text-center transform-gpu">
               <button
                 onClick={() => { 
                   if (showForgotPassword) setShowForgotPassword(false); 
@@ -384,7 +252,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   setError(null);
                   setSuccess(null);
                 }}
-                className="text-sm font-bold text-zinc-500 hover:text-white transition-colors"
+                className="text-sm font-bold text-zinc-500 hover:text-white transition-colors outline-none"
               >
                 {showForgotPassword 
                   ? 'Back to Login' 
@@ -396,4 +264,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       )}
     </AnimatePresence>
   );
-};
+});
+
+AuthModal.displayName = 'AuthModal';
