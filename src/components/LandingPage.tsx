@@ -88,11 +88,7 @@ export const LandingPage: React.FC<LandingPageProps> = memo(({ onStart }) => {
                 {/* Simulated Overlays */}
                 <div className="absolute bottom-6 left-6 right-6 space-y-2">
                   <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                    <motion.div 
-                      animate={{ x: ['-100%', '0%'] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                      className="h-full bg-rose-500 transform-gpu"
-                    />
+                    <div className="h-full bg-rose-500 w-[94%]" />
                   </div>
                   <div className="flex justify-between text-[10px] font-black text-rose-400 uppercase tracking-tighter">
                     <span>Hook Strength Analysis</span>
@@ -102,8 +98,8 @@ export const LandingPage: React.FC<LandingPageProps> = memo(({ onStart }) => {
               </div>
 
               <div className="space-y-4">
-                <div className="h-3 bg-zinc-800/50 rounded-full w-3/4 animate-pulse" />
-                <div className="h-3 bg-zinc-800/50 rounded-full w-1/2 animate-pulse" />
+                <div className="h-3 bg-zinc-800/50 rounded-full w-3/4" />
+                <div className="h-3 bg-zinc-800/50 rounded-full w-1/2" />
               </div>
             </motion.div>
 

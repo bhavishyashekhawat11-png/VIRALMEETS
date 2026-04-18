@@ -234,10 +234,9 @@ export const DeepAnalysisView = memo(({ onBack, onLegalClick }: { onBack: () => 
             <div className="absolute -top-24 -left-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full transform-gpu" />
             <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[60px] rounded-full transform-gpu" />
 
-            <div className="relative transform-gpu">
-              <div className="w-16 h-16 border-2 border-rose-500/20 rounded-full animate-ping absolute inset-0 transform-gpu" />
-              <div className="w-16 h-16 border-2 border-rose-500 rounded-full flex items-center justify-center relative bg-zinc-900 transform-gpu">
-                <Sparkles className="w-8 h-8 text-rose-500 animate-pulse transform-gpu" />
+            <div className="relative">
+              <div className="w-16 h-16 border-2 border-rose-500 rounded-full flex items-center justify-center relative bg-zinc-900">
+                <Sparkles className="w-8 h-8 text-rose-500" />
               </div>
             </div>
 
@@ -310,13 +309,13 @@ export const DeepAnalysisView = memo(({ onBack, onLegalClick }: { onBack: () => 
       {stage === 'results' && (
         <div className="flex-1 flex flex-col pb-8 overflow-y-auto h-full relative scroll-smooth no-scrollbar transform-gpu">
           {/* 1. CONTENT PREVIEW (TOP) */}
-          <div className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-md pb-4 mb-6 border-b border-zinc-900 transform-gpu">
-             <div className="flex items-center justify-between mb-4 transform-gpu">
-                 <div className="flex items-center gap-2 transform-gpu">
-                    <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse transform-gpu" />
-                    <h2 className="text-lg font-black text-zinc-100 uppercase tracking-tighter transform-gpu">Viral Intelligence</h2>
+          <div className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-md pb-4 mb-6 border-b border-zinc-900">
+             <div className="flex items-center justify-between mb-4">
+                 <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-rose-500 rounded-full" />
+                    <h2 className="text-lg font-black text-zinc-100 uppercase tracking-tighter">Viral Intelligence</h2>
                  </div>
-                 {isFetchingAnalysis && <RefreshCw className="w-4 h-4 text-rose-500 animate-spin transform-gpu" />}
+                 {isFetchingAnalysis && <RefreshCw className="w-4 h-4 text-rose-500 animate-spin" />}
              </div>
              <div className="w-full h-40 bg-black rounded-3xl overflow-hidden border border-zinc-800 flex items-center justify-center relative shadow-inner transform-gpu">
                {videoUrl && <video src={videoUrl} className="w-full h-full object-contain transform-gpu" controls />}

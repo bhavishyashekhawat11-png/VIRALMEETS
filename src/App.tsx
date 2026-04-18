@@ -18,7 +18,6 @@ import { Navbar } from './components/Navbar';
 import { AppTopBar } from './components/AppTopBar';
 import { AuthModal } from './components/AuthModal';
 import { Background } from './components/Background';
-import { FallingPattern } from './components/ui/falling-pattern';
 import { Footer } from './components/Footer';
 import { Step, Platform, PastIdea } from './types';
 import { auth } from './lib/firebase';
@@ -81,6 +80,12 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       setUser(authUser);
+      
+      // Post-signup / Post-login redirection
+      if (authUser && step === 'landing') {
+        setStep('home');
+        setAuthModalOpen(false);
+      }
       
       // Protected Route Logic
       const isAppPage = ['onboarding', 'home', 'deep_analysis', 'manage_subscription', 'result', 'settings'].includes(step);
@@ -222,9 +227,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-rose-500/30 overflow-x-hidden relative">
       <Background />
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]">
-        <FallingPattern color="#e11d48" duration={200} blurIntensity="0px" />
-      </div>
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
       
       {['landing', 'features', 'pricing', 'about', 'privacy', 'terms', 'refund', 'contact'].includes(step) ? (
         <Navbar 

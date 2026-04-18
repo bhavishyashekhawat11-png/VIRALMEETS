@@ -101,25 +101,25 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transform-gpu">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm transform-gpu"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
           />
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl overflow-hidden transform-gpu will-change-[transform,opacity]"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl overflow-hidden"
           >
             <div id="recaptcha-container"></div>
             
-            {/* Background Glow */}
-            <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/10 blur-[80px] rounded-full transform-gpu" />
+            {/* Background Glow - Static */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-500/5 blur-[60px] rounded-full pointer-events-none" />
             
             <button 
               onClick={onClose}
@@ -128,8 +128,8 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
               <X className="w-6 h-6" />
             </button>
 
-            <div className="mb-8 text-center transform-gpu">
-              <div className="inline-flex items-center justify-center p-3 bg-rose-500/10 rounded-2xl mb-4 transform-gpu">
+            <div className="mb-8 text-center">
+              <div className="inline-flex items-center justify-center p-3 bg-rose-500/10 rounded-2xl mb-4">
                 <Sparkles className="w-6 h-6 text-rose-500" />
               </div>
               <h2 className="text-3xl font-black text-white tracking-tighter">
@@ -142,7 +142,7 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
               </p>
             </div>
 
-            <form onSubmit={handleEmailSubmit} className="space-y-4 transform-gpu">
+            <form onSubmit={handleEmailSubmit} className="space-y-4">
               {!isLogin && !showForgotPassword && (
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
@@ -196,33 +196,31 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
                 )}
 
                 {error && (
-                  <div className="flex items-center gap-2 text-rose-500 text-xs font-bold bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 transform-gpu">
+                  <div className="flex items-center gap-2 text-rose-500 text-xs font-bold bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{error}</span>
                   </div>
                 )}
 
                 {success && (
-                  <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20 transform-gpu">
+                  <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
                     <span>{success}</span>
                   </div>
                 )}
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button
                   disabled={loading}
-                  className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all disabled:opacity-50 transform-gpu outline-none"
+                  className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-zinc-100 active:scale-95 transition-all disabled:opacity-50 outline-none"
                 >
                   {loading ? 'Processing...' : (showForgotPassword ? 'Send Reset Link' : (isLogin ? 'Login' : 'Create Account'))}
                   {!loading && <ArrowRight className="w-5 h-5" />}
-                </motion.button>
+                </button>
               </form>
 
             {!showForgotPassword && (
               <>
-                <div className="relative my-8 transform-gpu">
+                <div className="relative my-8">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-zinc-800"></div>
                   </div>
@@ -231,20 +229,18 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
                   </div>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button
                   disabled={loading}
                   onClick={handleGoogleLogin}
-                  className="w-full bg-zinc-950 border border-zinc-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc900 transition-all transform-gpu outline-none"
+                  className="w-full bg-zinc-950 border border-zinc-800 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc-900 active:scale-95 transition-all outline-none"
                 >
                   <Chrome className="w-5 h-5 text-rose-500" />
                   Google Account
-                </motion.button>
+                </button>
               </>
             )}
 
-            <div className="mt-8 text-center transform-gpu">
+            <div className="mt-8 text-center">
               <button
                 onClick={() => { 
                   if (showForgotPassword) setShowForgotPassword(false); 
