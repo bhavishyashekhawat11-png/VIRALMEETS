@@ -212,43 +212,6 @@ export const LandingPage: React.FC<LandingPageProps> = memo(({ onStart }) => {
         <FAQ />
       </div>
 
-      {/* Footer */}
-      <footer className="py-24 px-6 border-t border-zinc-900/50 bg-[#050505]">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 text-center md:text-left">
-          <div className="md:col-span-2">
-            <div className="text-3xl font-black text-white tracking-tighter mb-6">ViralMeets</div>
-            <p className="text-zinc-500 text-sm font-medium max-w-sm">
-              The premium AI companion for the next generation of digital creators. Built for those who don't just post, but compete.
-            </p>
-          </div>
-          
-          <div>
-            <h4 className="text-white text-xs font-black uppercase tracking-widest mb-6">Product</h4>
-            <div className="flex flex-col gap-4 text-sm font-bold text-zinc-500">
-              <button onClick={() => window.scrollTo(0,0)} className="hover:text-rose-500 transition-colors text-left uppercase tracking-tighter outline-none">Analysis</button>
-              <button onClick={onStart} className="hover:text-rose-500 transition-colors text-left uppercase tracking-tighter outline-none">Pricing</button>
-              <button className="hover:text-rose-500 transition-colors text-left uppercase tracking-tighter outline-none">API</button>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-white text-xs font-black uppercase tracking-widest mb-6">Legal</h4>
-            <div className="flex flex-col gap-4 text-sm font-bold text-zinc-500">
-              <button className="hover:text-rose-500 transition-colors text-left uppercase tracking-tighter outline-none">Privacy</button>
-              <button className="hover:text-rose-500 transition-colors text-left uppercase tracking-tighter outline-none">Terms</button>
-              <button className="hover:text-rose-500 transition-colors text-left uppercase tracking-tighter outline-none">Contact</button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto mt-20 pt-12 border-t border-zinc-900/50 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-[10px] text-zinc-700 font-bold uppercase tracking-[0.2em]">
-            © 2026 ViralMeets. Built for the bold.
-          </p>
-        </div>
-      </footer>
-
-      {/* Demo Modal */}
       <AnimatePresence>
         {showDemoModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

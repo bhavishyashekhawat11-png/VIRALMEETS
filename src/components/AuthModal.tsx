@@ -17,11 +17,12 @@ import { cn } from '../lib/utils';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onNavigate?: (step: any) => void;
 }
 
 type AuthMethod = 'email';
 
-export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose, onNavigate }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [method, setMethod] = useState<AuthMethod>('email');
   const [email, setEmail] = useState('');
@@ -310,7 +311,7 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
               </>
             )}
 
-            <div className="mt-8 text-center">
+            <div className="mt-8 text-center space-y-4">
               <button
                 onClick={() => { 
                   if (showForgotPassword) setShowForgotPassword(false); 
@@ -324,6 +325,29 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
                   ? 'Back to Login' 
                   : (isLogin ? "Don't have an account? Register" : "Already have an account? Login")}
               </button>
+
+              <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest leading-relaxed px-4">
+                By continuing, you agree to our{' '}
+                <button 
+                  onClick={() => {
+                    onClose();
+                    onNavigate?.('terms');
+                  }}
+                  className="text-rose-500/80 hover:text-rose-400 transition-colors underline decoration-rose-500/20 underline-offset-4"
+                >
+                  Terms of Service
+                </button>
+                {' '}and{' '}
+                <button 
+                  onClick={() => {
+                    onClose();
+                    onNavigate?.('privacy');
+                  }}
+                  className="text-rose-500/80 hover:text-rose-400 transition-colors underline decoration-rose-500/20 underline-offset-4"
+                >
+                  Privacy Policy
+                </button>
+              </p>
             </div>
           </motion.div>
         </div>

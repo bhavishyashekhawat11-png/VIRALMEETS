@@ -1,17 +1,40 @@
 import React, { memo } from 'react';
 import { Step } from '../types';
 
-export const Footer = memo(({ onLegalClick }: { onLegalClick: (s: Step) => void }) => {
+interface FooterProps {
+  onNavigate: (step: Step) => void;
+}
+
+export const Footer = memo(({ onNavigate }: FooterProps) => {
+  const currentYear = new Date().getFullYear();
+  
   return (
-    <div className="mt-12 pt-8 border-t border-zinc-900 flex flex-col items-center gap-4 pb-32 transform-gpu">
-      <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-        <button onClick={() => onLegalClick('privacy')} className="hover:text-rose-400 transition-colors outline-none">Privacy Policy</button>
-        <button onClick={() => onLegalClick('terms')} className="hover:text-rose-400 transition-colors outline-none">Terms & Conditions</button>
-        <button onClick={() => onLegalClick('refund')} className="hover:text-rose-400 transition-colors outline-none">Refund Policy</button>
-        <button onClick={() => onLegalClick('contact')} className="hover:text-rose-400 transition-colors outline-none">Contact</button>
+    <footer className="w-full bg-zinc-950 border-t border-zinc-900 py-12 px-6">
+      <div className="max-w-6xl mx-auto flex flex-col items-center gap-8 md:flex-row md:justify-between">
+        <div className="flex items-center gap-2 group cursor-pointer" onClick={() => onNavigate('landing')}>
+          <span className="text-lg font-black tracking-tighter text-zinc-100 uppercase">ViralMeets</span>
+        </div>
+
+        <p className="text-zinc-500 text-xs font-bold order-3 md:order-2">
+          © {currentYear} ViralMeets. All rights reserved.
+        </p>
+
+        <div className="flex items-center gap-8 order-2 md:order-3">
+          <button 
+            onClick={() => onNavigate('privacy')}
+            className="text-xs font-black text-zinc-500 hover:text-rose-500 uppercase tracking-widest transition-colors outline-none"
+          >
+            Privacy Policy
+          </button>
+          <button 
+            onClick={() => onNavigate('terms')}
+            className="text-xs font-black text-zinc-500 hover:text-rose-500 uppercase tracking-widest transition-colors outline-none"
+          >
+            Terms of Service
+          </button>
+        </div>
       </div>
-      <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">© 2026 ViralMeets. All rights reserved.</p>
-    </div>
+    </footer>
   );
 });
 

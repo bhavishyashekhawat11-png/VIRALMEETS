@@ -10,6 +10,8 @@ const SubscriptionView = lazy(() => import('./components/SubscriptionView').then
 const FeaturesPage = lazy(() => import('./components/FeaturesPage').then(m => ({ default: m.FeaturesPage })));
 const PricingPage = lazy(() => import('./components/PricingPage').then(m => ({ default: m.PricingPage })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(m => ({ default: m.AboutPage })));
+const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./components/TermsPage').then(m => ({ default: m.TermsPage })));
 const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ default: m.LegalPage })));
 
 import { LandingPage } from './components/LandingPage';
@@ -256,65 +258,109 @@ export default function App() {
       <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
       
       {['landing', 'features', 'pricing', 'about', 'privacy', 'terms', 'refund', 'contact'].includes(step) ? (
-        <Navbar 
-          onNavigate={(s) => setStep(s as Step)} 
-          onAuth={() => setAuthModalOpen(true)}
-          user={user}
-          onLogout={handleLogout}
-        />
-      ) : (
-        <AppTopBar 
-          onLogout={handleLogout} 
-          onNavigateHome={() => setStep('home')}
-          user={user}
-        />
-      )}
-
-      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
-      
-      <AnimatePresence mode="wait">
-        {step === 'landing' && (
-          <LandingPage 
-            key="landing" 
-            onStart={() => {
-              if (!user) {
-                setAuthModalOpen(true);
-              } else {
-                setStep(userProfile ? 'home' : 'onboarding');
-              }
-            }} 
+        <div className="flex flex-col min-h-screen">
+          <Navbar 
+            onNavigate={(s) => setStep(s as Step)} 
+            onAuth={() => setAuthModalOpen(true)}
+            user={user}
+            onLogout={handleLogout}
           />
-        )}
-
-        {step === 'features' && (
-          <Suspense fallback={<PageLoading />}>
-            <FeaturesPage key="features" />
-          </Suspense>
-        )}
-
-        {step === 'pricing' && (
-          <Suspense fallback={<PageLoading />}>
-            <PricingPage key="pricing" />
-          </Suspense>
-        )}
-
-        {step === 'about' && (
-          <Suspense fallback={<PageLoading />}>
-            <AboutPage key="about" />
-          </Suspense>
-        )}
-
-        {step !== 'landing' && !['features', 'pricing', 'about'].includes(step) && (
-          <motion.main 
-            key="app-content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="min-h-screen w-full max-w-md mx-auto relative flex flex-col transform-gpu will-change-transform"
-          >
-            <UpgradeModal onManageSubscription={() => setStep('manage_subscription')} />
+          <div className="flex-grow">
             <AnimatePresence mode="wait">
-              {step === 'onboarding' && (
+              {step === 'landing' && (
+                <LandingPage 
+                  key="landing" 
+                  onStart={() => {
+                    if (!user) {
+                      setAuthModalOpen(true);
+                    } else {
+                      setStep(userProfile ? 'home' : 'onboarding');
+                    }
+                  }} 
+                />
+              )}
+
+              {step === 'features' && (
+                <Suspense fallback={<PageLoading />}>
+                  <FeaturesPage key="features" />
+                </Suspense>
+              )}
+
+              {step === 'pricing' && (
+                <Suspense fallback={<PageLoading />}>
+                  <PricingPage key="pricing" />
+                </Suspense>
+              )}
+
+              {step === 'about' && (
+                <Suspense fallback={<PageLoading />}>
+                  <AboutPage key="about" />
+                </Suspense>
+              )}
+
+              {step === 'privacy' && (
+                <Suspense fallback={<PageLoading />}>
+                  <PrivacyPage key="privacy" />
+                </Suspense>
+              )}
+
+              {step === 'terms' && (
+                <Suspense fallback={<PageLoading />}>
+                  <TermsPage key="terms" />
+                </Suspense>
+              )}
+              
+              {['refund', 'contact'].includes(step) && (
+                <Suspense fallback={<PageLoading />}>
+                  <LegalPage 
+                    key={step}
+                    title={step === 'refund' ? "Refund Policy" : "Contact Us"}
+                    onBack={() => setStep('landing')}
+                    content={step === 'refund' ? `All purchases are **final and non-refundable**.
+
+Since ViralMeets provides instant digital access to premium features, refunds cannot be issued once access is granted.
+
+---
+
+### Exceptions
+
+Refunds may be considered only if:
+
+* There is a technical issue preventing access
+* Duplicate payment occurs
+
+Requests must be made within **48 hours** of purchase.` : `We’re here to help and support you at every step of your journey with ViralMeets.
+
+---
+
+### 📧 Email Support
+
+For any questions, issues, or feedback:
+
+support@viralmeets.com`}
+                  />
+                </Suspense>
+              )}
+            </AnimatePresence>
+          </div>
+          <Footer onNavigate={(s) => setStep(s)} />
+        </div>
+      ) : (
+        <motion.main 
+          key="app-content"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="min-h-screen w-full max-w-md mx-auto relative flex flex-col transform-gpu will-change-transform"
+        >
+          <AppTopBar 
+            onLogout={handleLogout} 
+            onNavigateHome={() => setStep('home')}
+            user={user}
+          />
+          <UpgradeModal onManageSubscription={() => setStep('manage_subscription')} />
+          <AnimatePresence mode="wait">
+            {step === 'onboarding' && (
           <OnboardingView 
             key="onboarding" 
             initialProfile={userProfile}
@@ -384,212 +430,6 @@ export default function App() {
             <SubscriptionView onBack={() => setStep('settings')} />
           </Suspense>
         )}
-        {step === 'privacy' && (
-          <Suspense fallback={<PageLoading />}>
-            <LegalPage 
-              title="Privacy Policy" 
-              onBack={() => setStep('home')}
-              content={`At ViralMeets, we respect your privacy and are committed to protecting your personal information.
-
-### 1. Information We Collect
-
-We may collect:
-
-* Basic account details (such as email or username if provided)
-* Uploaded content (videos, images, or ideas for analysis)
-* Usage data (how you interact with the app)
-
-We do **not** collect sensitive personal information unless explicitly required.
-
----
-
-### 2. How We Use Your Information
-
-Your data is used to:
-
-* Provide AI-powered analysis and insights
-* Improve app performance and user experience
-* Ensure security and prevent misuse
-
-We do **not sell or share your personal data** with third parties.
-
----
-
-### 3. Data Storage & Security
-
-We take reasonable measures to protect your data. However, no system is completely secure, and users are advised not to upload sensitive or confidential content.
-
----
-
-### 4. Third-Party Services
-
-We may use third-party services (such as analytics or AI providers) to enhance functionality. These services follow their own privacy policies.
-
----
-
-### 5. User Control
-
-You can:
-
-* Stop using the app at any time
-* Request deletion of your data (if applicable)
-
----
-
-### 6. Updates
-
-This policy may be updated periodically. Continued use of the app means you accept the updated policy.`}
-            />
-          </Suspense>
-        )}
-        {step === 'terms' && (
-          <Suspense fallback={<PageLoading />}>
-            <LegalPage 
-              title="Terms & Conditions" 
-              onBack={() => setStep('home')}
-              content={`By using ViralMeets, you agree to the following terms:
-
----
-
-### 1. Use of Service
-
-ViralMeets provides AI-based analysis and recommendations for content. The insights are **informational and predictive**, not guaranteed outcomes.
-
----
-
-### 2. User Responsibility
-
-You agree:
-
-* Not to misuse the platform
-* Not to upload illegal, harmful, or copyrighted content without permission
-* To use the app for lawful purposes only
-
----
-
-### 3. No Guarantee of Results
-
-While we aim to provide high-quality insights:
-
-* We do **not guarantee virality, engagement, or performance**
-* Results depend on multiple external factors beyond our control
-
----
-
-### 4. Account & Access
-
-We reserve the right to:
-
-* Restrict or terminate access if misuse is detected
-* Modify features without prior notice
-
----
-
-### 5. Intellectual Property
-
-All app content, design, and features belong to ViralMeets. Users may not copy or redistribute without permission.
-
----
-
-### 6. Limitation of Liability
-
-We are not liable for:
-
-* Content performance outcomes
-* Loss of data or business impact
-* Decisions made based on AI insights
-
----
-
-### 7. Updates to Terms
-
-Terms may change over time. Continued use means acceptance of updated terms.`}
-            />
-          </Suspense>
-        )}
-        {step === 'refund' && (
-          <Suspense fallback={<PageLoading />}>
-            <LegalPage 
-              title="Refund Policy" 
-              onBack={() => setStep('home')}
-              content={`All purchases are **final and non-refundable**.
-
-Since ViralMeets provides instant digital access to premium features, refunds cannot be issued once access is granted.
-
----
-
-### Exceptions
-
-Refunds may be considered only if:
-
-* There is a technical issue preventing access
-* Duplicate payment occurs
-
-Requests must be made within **48 hours** of purchase.`}
-            />
-          </Suspense>
-        )}
-        {step === 'contact' && (
-          <Suspense fallback={<PageLoading />}>
-            <LegalPage 
-              title="Contact Us" 
-              onBack={() => setStep('home')}
-              content={`We’re here to help and support you at every step of your journey with ViralMeets.
-
----
-
-### 📧 Email Support
-
-For any questions, issues, or feedback:
-
-**support@viralmeets.com**
-
----
-
-### 📱 Phone Support
-
-You can also reach us at:
-
-**+91 90018 20221**
-
----
-
-### 💬 What You Can Contact Us For
-
-* Technical issues or app errors
-* Payment or subscription queries
-* Feedback and suggestions
-* Feature requests
-* Account-related concerns
-
----
-
-### ⏱️ Response Time
-
-We aim to respond within **24–48 hours**.
-Response times may vary depending on request volume.
-
----
-
-### 🤝 Our Commitment
-
-We are committed to:
-
-* Providing reliable support
-* Continuously improving the app
-* Listening to user feedback
-
----
-
-### ⚠️ Note
-
-For faster support:
-
-* Clearly describe your issue
-* Include screenshots if possible`}
-            />
-          </Suspense>
-        )}
         {step === 'loading' && <LoadingView key="loading" />}
         {step === 'resetting' && (
           <motion.div key="resetting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center p-6 text-center">
@@ -632,7 +472,12 @@ For faster support:
             )}
           </motion.main>
         )}
-      </AnimatePresence>
+
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        onNavigate={(s) => setStep(s)}
+      />
     </div>
   );
 }
@@ -1454,7 +1299,7 @@ const HomeView = memo(({
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer onLegalClick={onLegalClick} />
+      <Footer onNavigate={onLegalClick} />
     </motion.div>
   );
 });
