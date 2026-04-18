@@ -1,7 +1,8 @@
 import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { Menu, X, Rocket, LogOut, User as UserIcon } from 'lucide-react';
+import { Menu, X, Rocket, LogOut, User as UserIcon, Settings } from 'lucide-react';
+import { ProfileSettingsModal } from './ProfileSettingsModal';
 
 interface NavbarProps {
   onNavigate: (page: string) => void;
@@ -12,6 +13,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, onLogout }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -77,10 +79,22 @@ export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, o
             {user ? (
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3 pr-4 border-r border-zinc-800">
-                  <div className="w-8 h-8 rounded-full bg-rose-600 flex items-center justify-center text-xs font-black text-white">
-                    {getUserInitial()}
-                  </div>
-                  <div className="flex flex-col">
+                  {user.photoURL ? (
+                    <img 
+                      src={user.photoURL} 
+                      alt={user.displayName || 'User'} 
+                      referrerPolicy="no-referrer"
+                      className="w-8 h-8 rounded-full object-cover ring-2 ring-zinc-800"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-rose-600 flex items-center justify-center text-xs font-black text-white ring-2 ring-rose-900/20">
+                      {getUserInitial()}
+                    </div>
+                  )}
+                  <div 
+                    className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setIsProfileSettingsOpen(true)}
+                  >
                     <span className="text-[10px] font-black text-zinc-100 leading-none truncate max-w-[100px]">{user.displayName || 'Creator'}</span>
                     <span className="text-[8px] font-bold text-zinc-500 truncate max-w-[100px]">{user.email}</span>
                   </div>
@@ -154,14 +168,31 @@ export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, o
 
               {/* Profile Section in Menu */}
               {user && (
-                <div className="mb-10 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-rose-600 flex items-center justify-center text-xl font-black text-white shrink-0 shadow-lg shadow-rose-900/20">
-                    {getUserInitial()}
+                <div className="mb-10 p-4 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-4 overflow-hidden">
+                    {user.photoURL ? (
+                      <img 
+                        src={user.photoURL} 
+                        alt={user.displayName || 'User'} 
+                        referrerPolicy="no-referrer"
+                        className="w-12 h-12 rounded-full object-cover shadow-lg"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-rose-600 flex items-center justify-center text-xl font-black text-white shrink-0 shadow-lg shadow-rose-900/20">
+                        {getUserInitial()}
+                      </div>
+                    )}
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-sm font-black text-white truncate">{user.displayName || 'Creator'}</span>
+                      <span className="text-[10px] font-bold text-zinc-500 truncate">{user.email}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-black text-white truncate">{user.displayName || 'Creator'}</span>
-                    <span className="text-[10px] font-bold text-zinc-500 truncate">{user.email}</span>
-                  </div>
+                  <button 
+                    onClick={() => { setIsProfileSettingsOpen(true); setIsMenuOpen(false); }}
+                    className="p-2 bg-zinc-800 text-zinc-400 rounded-xl hover:text-white transition-all flex items-center justify-center shrink-0"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </button>
                 </div>
               )}
 
@@ -222,6 +253,12 @@ export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, o
           </>
         )}
       </AnimatePresence>
+
+      <ProfileSettingsModal 
+        isOpen={isProfileSettingsOpen} 
+        onClose={() => setIsProfileSettingsOpen(false)} 
+        user={user}
+      />
     </>
   );
 });

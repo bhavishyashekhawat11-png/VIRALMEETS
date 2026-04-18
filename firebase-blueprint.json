@@ -5,6 +5,18 @@
       "description": "User profile and subscription data",
       "type": "object",
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "User's full name"
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address"
+        },
+        "avatar": {
+          "type": "string",
+          "description": "User's profile image URL"
+        },
         "plan": {
           "type": "string",
           "enum": ["FREE", "PRO"],
@@ -14,13 +26,18 @@
           "type": "string",
           "description": "Stripe subscription ID"
         },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation timestamp"
+        },
         "updatedAt": {
           "type": "string",
           "format": "date-time",
           "description": "Last update timestamp"
         }
       },
-      "required": ["plan"]
+      "required": ["plan", "email"]
     }
   },
   "firestore": {

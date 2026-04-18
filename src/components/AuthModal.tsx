@@ -1,14 +1,16 @@
 import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   updateProfile,
   signInWithPopup,
   GoogleAuthProvider,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  signOut
 } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { X, Mail, Lock, User, ArrowRight, Sparkles, Chrome, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -46,12 +48,69 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Logic: If Login mode, user MUST exist in Firestore
+      // If Register mode, create if not exists.
+      
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (isLogin) {
+        if (!userDoc.exists()) {
+          // User doesn't exist in our DB, but authenticated via Google
+          // Sign them out and show error
+          await signOut(auth);
+          setError("Account not found. Please register first.");
+          return;
+        }
+      } else {
+        // Register mode
+        if (userDoc.exists()) {
+          // User already exists, don't allow re-registration in register mode
+          await signOut(auth);
+          setError("Account already exists. Please login.");
+          return;
+        }
+        
+        // Initialize user in DB
+        await setDoc(doc(db, 'users', user.uid), {
+          name: user.displayName || 'Creator',
+          email: user.email,
+          avatar: user.photoURL || '',
+          plan: 'FREE',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+      
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      setError(mapAuthError(err.code));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const mapAuthError = (code: string): string => {
+    switch (code) {
+      case 'auth/user-not-found':
+        return "Account not found. Please register first.";
+      case 'auth/wrong-password':
+      case 'auth/invalid-credential':
+        return "Incorrect password";
+      case 'auth/email-already-in-use':
+        return "Account already exists. Please login.";
+      case 'auth/invalid-email':
+        return "Invalid email format";
+      case 'auth/popup-closed-by-user':
+        return "Login cancelled";
+      case 'auth/network-request-failed':
+        return "Network error. Please check your connection.";
+      case 'auth/too-many-requests':
+        return "Too many attempts. Please try again later.";
+      default:
+        return "Authentication failed. Please try again.";
     }
   };
 
@@ -70,11 +129,22 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: name });
+        const user = userCredential.user;
+        await updateProfile(user, { displayName: name });
+        
+        // Save to Firestore
+        await setDoc(doc(db, 'users', user.uid), {
+          name,
+          email,
+          avatar: '',
+          plan: 'FREE',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
       }
       onClose();
     } catch (err: any) {
-      setError(err.message);
+      setError(mapAuthError(err.code));
     } finally {
       setLoading(false);
     }

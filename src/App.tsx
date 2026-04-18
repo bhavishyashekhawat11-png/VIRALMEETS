@@ -20,8 +20,9 @@ import { AuthModal } from './components/AuthModal';
 import { Background } from './components/Background';
 import { Footer } from './components/Footer';
 import { Step, Platform, PastIdea } from './types';
-import { auth } from './lib/firebase';
+import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext';
 import { UpgradeModal } from './components/UpgradeModal';
@@ -78,13 +79,38 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       setUser(authUser);
       
-      // Post-signup / Post-login redirection
-      if (authUser && step === 'landing') {
-        setStep('home');
-        setAuthModalOpen(false);
+      if (authUser) {
+        // Fetch profile from Firestore if missing or needs sync
+        try {
+          const userDoc = await getDoc(doc(db, 'users', authUser.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            const profile: UserProfile = {
+              experience: data.experience || 'Just starting',
+              followers: data.followers || 'Under 1K',
+              audienceAge: data.audienceAge || 'Teens',
+              categories: data.categories || [],
+              problem: data.problem || 'Not getting views',
+              goal: data.goal || 'Get more views'
+            };
+            setUserProfile(profile);
+            localStorage.setItem('viralmeets_profile', JSON.stringify(profile));
+          } else {
+            // New user without profile data
+            if (step !== 'onboarding') setStep('onboarding');
+          }
+        } catch (e) {
+          console.error("Error fetching profile:", e);
+        }
+
+        // Post-signup / Post-login redirection
+        if (step === 'landing') {
+          setStep('home');
+          setAuthModalOpen(false);
+        }
       }
       
       // Protected Route Logic
@@ -240,6 +266,7 @@ export default function App() {
         <AppTopBar 
           onLogout={handleLogout} 
           onNavigateHome={() => setStep('home')}
+          user={user}
         />
       )}
 
@@ -291,9 +318,21 @@ export default function App() {
           <OnboardingView 
             key="onboarding" 
             initialProfile={userProfile}
-            onComplete={(profile) => {
+            onComplete={async (profile) => {
               setUserProfile(profile);
               localStorage.setItem('viralmeets_profile', JSON.stringify(profile));
+              
+              if (auth.currentUser) {
+                try {
+                  await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                    ...profile,
+                    updatedAt: serverTimestamp()
+                  });
+                } catch (e) {
+                  console.error("Error syncing onboarding profile:", e);
+                }
+              }
+
               if (result) {
                 handleAnalyze();
               } else {
