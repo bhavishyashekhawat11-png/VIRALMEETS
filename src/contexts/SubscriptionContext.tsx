@@ -7,7 +7,7 @@ interface SubscriptionContextType {
   isPro: boolean;
   plan: 'FREE' | 'PRO';
   loading: boolean;
-  upgrade: () => void;
+  upgrade: (planType?: 'monthly' | 'yearly') => void;
   showUpgradeModal: boolean;
   setShowUpgradeModal: (show: boolean) => void;
   usageCount: number;
@@ -63,25 +63,64 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const isPro = plan === 'PRO';
 
-  const upgrade = async () => {
-    if (!auth.currentUser) return;
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const upgrade = async (planType: 'monthly' | 'yearly' = 'monthly') => {
+    console.log("Payment triggered", { planType, user: auth.currentUser?.email });
+    
+    if (!auth.currentUser) {
+      setPaymentError("Please sign in to upgrade.");
+      return;
+    }
     
     setPaymentLoading(true);
     setPaymentError(null);
 
+    const scriptLoaded = await loadRazorpay();
+    if (!scriptLoaded) {
+      console.error("Razorpay script failed to load");
+      setPaymentError("Could not load payment gateway. Please check your connection.");
+      setPaymentLoading(false);
+      return;
+    }
+
+    if (!window.Razorpay) {
+      console.error("window.Razorpay not found after script load");
+      setPaymentError("Payment system is currently unavailable. Please try again later.");
+      setPaymentLoading(false);
+      return;
+    }
+
+    const amount = planType === 'yearly' ? 199900 : 29900;
+    const planName = planType === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan';
+
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: 29900,
+      amount: amount,
       currency: "INR",
       name: "ViralMeets",
-      description: "Unlock Full Analysis",
+      description: `Upgrade to ${planName}`,
       image: "https://picsum.photos/seed/viral/200/200",
       handler: async function (response: any) {
+        console.log("Payment Success", response);
         try {
           const userRef = doc(db, 'users', auth.currentUser!.uid);
           await updateDoc(userRef, {
             plan: "PRO",
             userPlan: "PRO",
+            planType: planType,
             paymentStatus: "success",
             paymentId: response.razorpay_payment_id,
             updatedAt: serverTimestamp()
@@ -91,8 +130,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           localStorage.setItem('viralmeets_plan', 'PRO');
           setShowUpgradeModal(false);
         } catch (e) {
-          console.error("Error updating subscription:", e);
-          setPaymentError("Payment successful, but failed to update profile. Please contact support.");
+          console.error("Error updating subscription in Firestore:", e);
+          setPaymentError("Payment successful, but failed to update profile. Please contact support with payment ID: " + response.razorpay_payment_id);
         } finally {
           setPaymentLoading(false);
         }
@@ -106,6 +145,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       },
       modal: {
         ondismiss: function() {
+          console.log("Payment modal dismissed");
           setPaymentLoading(false);
         }
       }
@@ -114,13 +154,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     try {
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response: any) {
+        console.error("Payment Failed", response.error);
         setPaymentError(response.error.description || 'Payment failed. Please try again.');
         setPaymentLoading(false);
       });
       rzp.open();
     } catch (e) {
-      console.error("Razorpay error:", e);
-      setPaymentError("Could not load payment gateway. Please try again.");
+      console.error("Error opening Razorpay instance:", e);
+      setPaymentError("Could not initiate payment. Please try again.");
       setPaymentLoading(false);
     }
   };

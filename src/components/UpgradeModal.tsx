@@ -80,7 +80,7 @@ export const UpgradeModal = memo(({ onManageSubscription }: { onManageSubscripti
               )}
 
               <button
-                onClick={upgrade}
+                onClick={() => upgrade()}
                 disabled={paymentLoading}
                 className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl shadow-xl shadow-rose-900/40 transition-all active:scale-[0.98] relative group overflow-hidden outline-none transform-gpu"
               >

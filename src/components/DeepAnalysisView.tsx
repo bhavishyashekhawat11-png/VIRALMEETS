@@ -111,7 +111,7 @@ export const DeepAnalysisView = memo(({ onBack, onLegalClick }: { onBack: () => 
       <p className="text-xs font-black text-zinc-100 mb-1 uppercase tracking-tight">{title}</p>
       <p className="text-[10px] text-zinc-400 mb-4 max-w-[180px]">{description}</p>
       <button 
-        onClick={upgrade}
+        onClick={() => upgrade()}
         disabled={paymentLoading}
         className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-widest transition-all"
       >

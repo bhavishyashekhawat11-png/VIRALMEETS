@@ -308,7 +308,7 @@ export function SubscriptionView({ onBack }: { onBack: () => void }) {
           <div className="grid grid-cols-1 gap-4">
             {/* Monthly */}
             <button 
-              onClick={upgrade}
+              onClick={() => upgrade('monthly')}
               className="group relative p-6 bg-zinc-900 border border-zinc-800 rounded-[2rem] text-left hover:border-rose-500/50 transition-all active:scale-[0.98]"
             >
               <div className="flex justify-between items-start mb-4">
@@ -328,7 +328,7 @@ export function SubscriptionView({ onBack }: { onBack: () => void }) {
 
             {/* Yearly */}
             <button 
-              onClick={upgrade}
+              onClick={() => upgrade('yearly')}
               className="group relative p-6 bg-zinc-900 border-2 border-rose-600 rounded-[2rem] text-left shadow-[0_0_30px_rgba(225,29,72,0.15)] active:scale-[0.98] transition-all"
             >
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rose-600 text-white text-[10px] font-black px-4 py-1 rounded-full uppercase tracking-widest">

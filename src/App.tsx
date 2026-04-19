@@ -1647,7 +1647,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
           {!isPro && (
             <div className="mt-8 px-2">
               <button
-                onClick={upgrade}
+                onClick={() => upgrade()}
                 disabled={paymentLoading}
                 className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black py-5 rounded-3xl shadow-xl shadow-rose-900/40 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               >
@@ -1713,7 +1713,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm rounded-3xl p-6 text-center">
                           <Lock className="w-6 h-6 text-rose-500 mb-2" />
                           <p className="text-xs font-bold text-zinc-200 mb-1">Unlock more hooks</p>
-                          <button onClick={upgrade} className="text-[10px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-300 transition-colors">
+                          <button onClick={() => upgrade()} className="text-[10px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-300 transition-colors">
                             {paymentLoading ? "Loading..." : "Unlock Full Analysis 🚀"}
                           </button>
                         </div>
@@ -1824,7 +1824,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                       <h4 className="text-sm font-black text-zinc-100 mb-1">Full Script Locked</h4>
                       <p className="text-[10px] text-zinc-500 mb-4">Get the full structured script with Pro</p>
                       <button 
-                        onClick={upgrade} 
+                        onClick={() => upgrade()} 
                         disabled={paymentLoading}
                         className="w-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-xl hover:bg-rose-500 transition-colors disabled:opacity-50"
                       >
