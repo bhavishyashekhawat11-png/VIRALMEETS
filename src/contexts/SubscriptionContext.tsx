@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { auth, db } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 interface SubscriptionContextType {
   isPro: boolean;
@@ -11,6 +13,8 @@ interface SubscriptionContextType {
   usageCount: number;
   incrementUsage: () => void;
   checkLimit: () => boolean;
+  paymentError: string | null;
+  paymentLoading: boolean;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -33,14 +37,92 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
     return parseInt(saved || '0', 10);
   });
-  const [loading, setLoading] = useState(false);
+   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            const userPlan = data.userPlan || data.plan || 'FREE';
+            setPlan(userPlan as 'FREE' | 'PRO');
+            localStorage.setItem('viralmeets_plan', userPlan);
+          }
+        } catch (e) {
+          console.error("Error fetching user plan:", e);
+        }
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const isPro = plan === 'PRO';
 
-  const upgrade = () => {
-    setPlan('PRO');
-    localStorage.setItem('viralmeets_plan', 'PRO');
-    setShowUpgradeModal(false);
+  const upgrade = async () => {
+    if (!auth.currentUser) return;
+    
+    setPaymentLoading(true);
+    setPaymentError(null);
+
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+      amount: 29900,
+      currency: "INR",
+      name: "ViralMeets",
+      description: "Unlock Full Analysis",
+      image: "https://picsum.photos/seed/viral/200/200",
+      handler: async function (response: any) {
+        try {
+          const userRef = doc(db, 'users', auth.currentUser!.uid);
+          await updateDoc(userRef, {
+            plan: "PRO",
+            userPlan: "PRO",
+            paymentStatus: "success",
+            paymentId: response.razorpay_payment_id,
+            updatedAt: serverTimestamp()
+          });
+          
+          setPlan('PRO');
+          localStorage.setItem('viralmeets_plan', 'PRO');
+          setShowUpgradeModal(false);
+        } catch (e) {
+          console.error("Error updating subscription:", e);
+          setPaymentError("Payment successful, but failed to update profile. Please contact support.");
+        } finally {
+          setPaymentLoading(false);
+        }
+      },
+      prefill: {
+        email: auth.currentUser.email || '',
+        name: auth.currentUser.displayName || ''
+      },
+      theme: {
+        color: "#e11d48", // rose-600
+      },
+      modal: {
+        ondismiss: function() {
+          setPaymentLoading(false);
+        }
+      }
+    };
+
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        setPaymentError(response.error.description || 'Payment failed. Please try again.');
+        setPaymentLoading(false);
+      });
+      rzp.open();
+    } catch (e) {
+      console.error("Razorpay error:", e);
+      setPaymentError("Could not load payment gateway. Please try again.");
+      setPaymentLoading(false);
+    }
   };
 
   const incrementUsage = () => {
@@ -68,7 +150,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       setShowUpgradeModal,
       usageCount: analysisCount,
       incrementUsage,
-      checkLimit
+      checkLimit,
+      paymentError,
+      paymentLoading
     }}>
       {children}
     </SubscriptionContext.Provider>

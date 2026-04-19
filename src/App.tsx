@@ -1489,7 +1489,7 @@ const SettingsView = memo(({ onBack, onLegalClick }: { onBack: () => void, onLeg
 SettingsView.displayName = 'SettingsView';
 
 const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRematch, bestScore, analysisStage, error, onLegalClick, onEditPreferences }: { key?: string; result: AnalysisResult; idea: string; mediaFile: any; mediaContext: string; onReset: () => void; onRematch: () => void; bestScore: number; analysisStage: 'quick' | 'detailed'; error?: string | null; onLegalClick: (s: Step) => void; onEditPreferences: () => void }) => {
-  const { isPro, setShowUpgradeModal } = useSubscription();
+  const { isPro, setShowUpgradeModal, upgrade, paymentLoading } = useSubscription();
   const [showAllTags, setShowAllTags] = useState(false);
   const [activeHookIndex, setActiveHookIndex] = useState(0);
   const [showFullRewrite, setShowFullRewrite] = useState(false);
@@ -1643,6 +1643,18 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
               ))}
             </div>
           </div>
+
+          {!isPro && (
+            <div className="mt-8 px-2">
+              <button
+                onClick={upgrade}
+                disabled={paymentLoading}
+                className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black py-5 rounded-3xl shadow-xl shadow-rose-900/40 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              >
+                {paymentLoading ? "Processing..." : "Unlock Full Analysis 🚀"}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 2. MAIN SECTION: Upgrade This Content 🚀 */}
@@ -1701,7 +1713,9 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm rounded-3xl p-6 text-center">
                           <Lock className="w-6 h-6 text-rose-500 mb-2" />
                           <p className="text-xs font-bold text-zinc-200 mb-1">Unlock more hooks</p>
-                          <button onClick={() => setShowUpgradeModal(true)} className="text-[10px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-300 transition-colors">Upgrade to Pro</button>
+                          <button onClick={upgrade} className="text-[10px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-300 transition-colors">
+                            {paymentLoading ? "Loading..." : "Unlock Full Analysis 🚀"}
+                          </button>
                         </div>
                       ) : null}
                       <div className={cn("space-y-3", isLocked && "blur-[2px]")}>
@@ -1809,7 +1823,13 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                       <Lock className="w-8 h-8 text-rose-500 mx-auto mb-3" />
                       <h4 className="text-sm font-black text-zinc-100 mb-1">Full Script Locked</h4>
                       <p className="text-[10px] text-zinc-500 mb-4">Get the full structured script with Pro</p>
-                      <button onClick={() => setShowUpgradeModal(true)} className="w-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-xl hover:bg-rose-500 transition-colors">Upgrade Now</button>
+                      <button 
+                        onClick={upgrade} 
+                        disabled={paymentLoading}
+                        className="w-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-xl hover:bg-rose-500 transition-colors disabled:opacity-50"
+                      >
+                        {paymentLoading ? "Loading..." : "Unlock Full Analysis 🚀"}
+                      </button>
                     </div>
                   </div>
                 )}

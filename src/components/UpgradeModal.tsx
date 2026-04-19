@@ -1,11 +1,11 @@
 import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Rocket, Check, Lock, X, Sparkles, Zap, BarChart3, Wand2 } from 'lucide-react';
+import { Rocket, Check, Lock, X, Sparkles, Zap, BarChart3, Wand2, AlertCircle, Loader2 } from 'lucide-react';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { cn } from '../lib/utils';
 
 export const UpgradeModal = memo(({ onManageSubscription }: { onManageSubscription?: () => void }) => {
-  const { showUpgradeModal, setShowUpgradeModal, upgrade } = useSubscription();
+  const { showUpgradeModal, setShowUpgradeModal, upgrade, paymentLoading, paymentError } = useSubscription();
 
   if (!showUpgradeModal) return null;
 
@@ -72,13 +72,28 @@ export const UpgradeModal = memo(({ onManageSubscription }: { onManageSubscripti
             </div>
 
             <div className="space-y-4 transform-gpu">
+              {paymentError && (
+                <div className="flex items-center gap-2 text-rose-500 text-[10px] font-black uppercase tracking-widest bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20 mb-4 animate-in fade-in slide-in-from-top-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{paymentError}</span>
+                </div>
+              )}
+
               <button
                 onClick={upgrade}
-                className="w-full bg-rose-600 hover:bg-rose-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-rose-900/40 transition-all active:scale-[0.98] relative group overflow-hidden outline-none transform-gpu"
+                disabled={paymentLoading}
+                className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl shadow-xl shadow-rose-900/40 transition-all active:scale-[0.98] relative group overflow-hidden outline-none transform-gpu"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] transform-gpu" />
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  Upgrade to Pro 🚀
+                  {paymentLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Upgrade to Pro 🚀'
+                  )}
                 </span>
               </button>
               
