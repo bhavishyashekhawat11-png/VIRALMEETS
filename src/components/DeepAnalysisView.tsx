@@ -770,7 +770,7 @@ export const DeepAnalysisView = memo(({ onBack, onLegalClick }: { onBack: () => 
           </div>
         </div>
       )}
-      <Footer onNavigate={onLegalClick} />
+      <Footer />
     </motion.div>
   );
 });

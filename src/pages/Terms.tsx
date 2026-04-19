@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { motion } from 'motion/react';
 import { FileText, CheckCircle, AlertCircle, UserCheck, ShieldCheck, Scale, History, Mail, XCircle } from 'lucide-react';
 
-export const TermsPage = memo(() => {
+export const Terms = memo(() => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -115,4 +115,5 @@ export const TermsPage = memo(() => {
   );
 });
 
-TermsPage.displayName = 'TermsPage';
+Terms.displayName = 'Terms';
+export default Terms;

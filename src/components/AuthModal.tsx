@@ -14,15 +14,16 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { X, Mail, Lock, User, ArrowRight, Sparkles, Chrome, CheckCircle2, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+import { Link } from 'react-router-dom';
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigate?: (step: any) => void;
 }
 
 type AuthMethod = 'email';
 
-export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose, onNavigate }) => {
+export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [method, setMethod] = useState<AuthMethod>('email');
   const [email, setEmail] = useState('');
@@ -328,25 +329,21 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose, onNa
 
               <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest leading-relaxed px-4">
                 By continuing, you agree to our{' '}
-                <button 
-                  onClick={() => {
-                    onClose();
-                    onNavigate?.('terms');
-                  }}
+                <Link 
+                  to="/terms"
+                  onClick={onClose}
                   className="text-rose-500/80 hover:text-rose-400 transition-colors underline decoration-rose-500/20 underline-offset-4"
                 >
                   Terms of Service
-                </button>
+                </Link>
                 {' '}and{' '}
-                <button 
-                  onClick={() => {
-                    onClose();
-                    onNavigate?.('privacy');
-                  }}
+                <Link 
+                  to="/privacy"
+                  onClick={onClose}
                   className="text-rose-500/80 hover:text-rose-400 transition-colors underline decoration-rose-500/20 underline-offset-4"
                 >
                   Privacy Policy
-                </button>
+                </Link>
               </p>
             </div>
           </motion.div>

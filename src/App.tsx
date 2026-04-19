@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense, memo, useMemo } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { analyzeIdeaQuick, analyzeIdeaDetailed, AnalysisResult, UserProfile, generateProfileInsights, ProfileInsights, executeQuickAction } from './lib/gemini';
 import { RotateCcw, Flame, Skull, AlertTriangle, Sparkles, Share, Dice5, Zap, TrendingUp, ArrowRight, ArrowLeft, Paperclip, Link as LinkIcon, Image as ImageIcon, Video, Clapperboard, X, Trophy, History, Check, RefreshCw, Music, Instagram, Youtube, Brain, Target, BarChart3, Activity, Rocket, Lock, Unlock, ChevronRight, ChevronLeft, FileText, Wand2, AlertCircle, Info, ShieldCheck, CheckCircle2, CreditCard, Clock, RotateCcw as RotateCcwIcon } from 'lucide-react';
@@ -10,8 +11,8 @@ const SubscriptionView = lazy(() => import('./components/SubscriptionView').then
 const FeaturesPage = lazy(() => import('./components/FeaturesPage').then(m => ({ default: m.FeaturesPage })));
 const PricingPage = lazy(() => import('./components/PricingPage').then(m => ({ default: m.PricingPage })));
 const AboutPage = lazy(() => import('./components/AboutPage').then(m => ({ default: m.AboutPage })));
-const PrivacyPage = lazy(() => import('./components/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
-const TermsPage = lazy(() => import('./components/TermsPage').then(m => ({ default: m.TermsPage })));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
 const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ default: m.LegalPage })));
 
 import { LandingPage } from './components/LandingPage';
@@ -59,6 +60,8 @@ const RANDOM_IDEAS = [
 ];
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { isPro, plan, checkLimit, incrementUsage, setShowUpgradeModal } = useSubscription();
   const [step, setStep] = useState<Step>('landing');
   const [analysisStage, setAnalysisStage] = useState<'idle' | 'quick' | 'detailed'>('idle');
@@ -252,71 +255,96 @@ export default function App() {
     }, 1500);
   };
 
+  // Sync step with URL if URL changes to /privacy or /terms
+  useEffect(() => {
+    if (location.pathname === '/privacy') setStep('privacy');
+    else if (location.pathname === '/terms') setStep('terms');
+    else if (location.pathname === '/' && ['privacy', 'terms'].includes(step)) setStep('landing');
+  }, [location.pathname]);
+
+  const handleNavigate = (s: Step) => {
+    if (s === 'privacy') navigate('/privacy');
+    else if (s === 'terms') navigate('/terms');
+    else {
+      setStep(s);
+      if (location.pathname !== '/') navigate('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-rose-500/30 overflow-x-hidden relative">
       <Background />
       <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
       
-      {['landing', 'features', 'pricing', 'about', 'privacy', 'terms', 'refund', 'contact'].includes(step) ? (
-        <div className="flex flex-col min-h-screen">
-          <Navbar 
-            onNavigate={(s) => setStep(s as Step)} 
-            onAuth={() => setAuthModalOpen(true)}
-            user={user}
-            onLogout={handleLogout}
-          />
-          <div className="flex-grow">
-            <AnimatePresence mode="wait">
-              {step === 'landing' && (
-                <LandingPage 
-                  key="landing" 
-                  onStart={() => {
-                    if (!user) {
-                      setAuthModalOpen(true);
-                    } else {
-                      setStep(userProfile ? 'home' : 'onboarding');
-                    }
-                  }} 
+      <Routes>
+        <Route path="/privacy" element={
+          <div className="flex flex-col min-h-screen">
+            <Navbar onNavigate={handleNavigate} onAuth={() => setAuthModalOpen(true)} user={user} onLogout={handleLogout} />
+            <div className="flex-grow">
+              <Suspense fallback={<PageLoading />}><Privacy /></Suspense>
+            </div>
+            <Footer />
+          </div>
+        } />
+        <Route path="/terms" element={
+          <div className="flex flex-col min-h-screen">
+            <Navbar onNavigate={handleNavigate} onAuth={() => setAuthModalOpen(true)} user={user} onLogout={handleLogout} />
+            <div className="flex-grow">
+              <Suspense fallback={<PageLoading />}><Terms /></Suspense>
+            </div>
+            <Footer />
+          </div>
+        } />
+        <Route path="*" element={
+          <>
+            {['landing', 'features', 'pricing', 'about', 'refund', 'contact'].includes(step) ? (
+              <div className="flex flex-col min-h-screen">
+                <Navbar 
+                  onNavigate={handleNavigate} 
+                  onAuth={() => setAuthModalOpen(true)}
+                  user={user}
+                  onLogout={handleLogout}
                 />
-              )}
+                <div className="flex-grow">
+                  <AnimatePresence mode="wait">
+                    {step === 'landing' && (
+                      <LandingPage 
+                        key="landing" 
+                        onStart={() => {
+                          if (!user) {
+                            setAuthModalOpen(true);
+                          } else {
+                            setStep(userProfile ? 'home' : 'onboarding');
+                          }
+                        }} 
+                      />
+                    )}
 
-              {step === 'features' && (
-                <Suspense fallback={<PageLoading />}>
-                  <FeaturesPage key="features" />
-                </Suspense>
-              )}
+                    {step === 'features' && (
+                      <Suspense fallback={<PageLoading />}>
+                        <FeaturesPage key="features" />
+                      </Suspense>
+                    )}
 
-              {step === 'pricing' && (
-                <Suspense fallback={<PageLoading />}>
-                  <PricingPage key="pricing" />
-                </Suspense>
-              )}
+                    {step === 'pricing' && (
+                      <Suspense fallback={<PageLoading />}>
+                        <PricingPage key="pricing" />
+                      </Suspense>
+                    )}
 
-              {step === 'about' && (
-                <Suspense fallback={<PageLoading />}>
-                  <AboutPage key="about" />
-                </Suspense>
-              )}
+                    {step === 'about' && (
+                      <Suspense fallback={<PageLoading />}>
+                        <AboutPage key="about" />
+                      </Suspense>
+                    )}
 
-              {step === 'privacy' && (
-                <Suspense fallback={<PageLoading />}>
-                  <PrivacyPage key="privacy" />
-                </Suspense>
-              )}
-
-              {step === 'terms' && (
-                <Suspense fallback={<PageLoading />}>
-                  <TermsPage key="terms" />
-                </Suspense>
-              )}
-              
-              {['refund', 'contact'].includes(step) && (
-                <Suspense fallback={<PageLoading />}>
-                  <LegalPage 
-                    key={step}
-                    title={step === 'refund' ? "Refund Policy" : "Contact Us"}
-                    onBack={() => setStep('landing')}
-                    content={step === 'refund' ? `All purchases are **final and non-refundable**.
+                    {['refund', 'contact'].includes(step) && (
+                      <Suspense fallback={<PageLoading />}>
+                        <LegalPage 
+                          key={step}
+                          title={step === 'refund' ? "Refund Policy" : "Contact Us"}
+                          onBack={() => setStep('landing')}
+                          content={step === 'refund' ? `All purchases are **final and non-refundable**.
 
 Since ViralMeets provides instant digital access to premium features, refunds cannot be issued once access is granted.
 
@@ -338,146 +366,148 @@ Requests must be made within **48 hours** of purchase.` : `We’re here to help 
 For any questions, issues, or feedback:
 
 support@viralmeets.com`}
+                        />
+                      </Suspense>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <Footer />
+              </div>
+            ) : (
+              <motion.main 
+                key="app-content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="min-h-screen w-full max-w-md mx-auto relative flex flex-col transform-gpu will-change-transform"
+              >
+                <AppTopBar 
+                  onLogout={handleLogout} 
+                  onNavigateHome={() => setStep('home')}
+                  user={user}
+                />
+                <UpgradeModal onManageSubscription={() => setStep('manage_subscription')} />
+                <AnimatePresence mode="wait">
+                  {step === 'onboarding' && (
+                <OnboardingView 
+                  key="onboarding" 
+                  initialProfile={userProfile}
+                  onComplete={async (profile) => {
+                    setUserProfile(profile);
+                    localStorage.setItem('viralmeets_profile', JSON.stringify(profile));
+                    
+                    if (auth.currentUser) {
+                      try {
+                        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                          ...profile,
+                          updatedAt: serverTimestamp()
+                        });
+                      } catch (e) {
+                        console.error("Error syncing onboarding profile:", e);
+                      }
+                    }
+
+                    if (result) {
+                      handleAnalyze();
+                    } else {
+                      setStep('home');
+                    }
+                  }} 
+                  onLegalClick={handleNavigate}
+                />
+              )}
+              {step === 'home' && (
+                <HomeView
+                  key="home"
+                  idea={idea}
+                  setIdea={setIdea}
+                  mediaContext={mediaContext}
+                  setMediaContext={setMediaContext}
+                  mediaFile={mediaFile}
+                  setMediaFile={setMediaFile}
+                  platform={platform}
+                  setPlatform={setPlatform}
+                  niche={niche}
+                  setNiche={setNiche}
+                  brutalMode={false} 
+                  setBrutalMode={() => {}}
+                  feedbackStyle={feedbackStyle}
+                  setFeedbackStyle={setFeedbackStyle}
+                  onAnalyze={handleAnalyze}
+                  onDeepAnalysis={() => setStep('deep_analysis')}
+                  error={error}
+                  streak={streak}
+                  pastIdeas={pastIdeas}
+                  bestScore={bestScore}
+                  todayBest={todayBest}
+                  onResetOnboarding={handleFullReset}
+                  onLegalClick={handleNavigate}
+                  onEditPreferences={handleEditPreferences}
+                />
+              )}
+              {step === 'deep_analysis' && (
+                <Suspense fallback={<PageLoading />}>
+                  <DeepAnalysisView 
+                    onBack={() => setStep('home')} 
+                    onLegalClick={handleNavigate}
                   />
                 </Suspense>
               )}
-            </AnimatePresence>
-          </div>
-          <Footer onNavigate={(s) => setStep(s)} />
-        </div>
-      ) : (
-        <motion.main 
-          key="app-content"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="min-h-screen w-full max-w-md mx-auto relative flex flex-col transform-gpu will-change-transform"
-        >
-          <AppTopBar 
-            onLogout={handleLogout} 
-            onNavigateHome={() => setStep('home')}
-            user={user}
-          />
-          <UpgradeModal onManageSubscription={() => setStep('manage_subscription')} />
-          <AnimatePresence mode="wait">
-            {step === 'onboarding' && (
-          <OnboardingView 
-            key="onboarding" 
-            initialProfile={userProfile}
-            onComplete={async (profile) => {
-              setUserProfile(profile);
-              localStorage.setItem('viralmeets_profile', JSON.stringify(profile));
-              
-              if (auth.currentUser) {
-                try {
-                  await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-                    ...profile,
-                    updatedAt: serverTimestamp()
-                  });
-                } catch (e) {
-                  console.error("Error syncing onboarding profile:", e);
-                }
-              }
+              {step === 'manage_subscription' && (
+                <Suspense fallback={<PageLoading />}>
+                  <SubscriptionView onBack={() => setStep('settings')} />
+                </Suspense>
+              )}
+              {step === 'loading' && <LoadingView key="loading" />}
+              {step === 'resetting' && (
+                <motion.div key="resetting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="relative w-24 h-24 mb-8">
+                    <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
+                    <motion.div className="absolute inset-0 border-4 border-rose-500 rounded-full border-t-transparent" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <RotateCcw className="w-8 h-8 text-rose-500 animate-pulse" />
+                    </div>
+                  </div>
+                  <p className="text-zinc-400 font-bold">Resetting your ViralMeets...</p>
+                </motion.div>
+              )}
+              {step === 'result' && result && analysisStage !== 'idle' && (
+                <ResultView 
+                  key="result" 
+                  result={result} 
+                  idea={idea} 
+                  mediaFile={mediaFile} 
+                  mediaContext={mediaContext} 
+                  onReset={reset} 
+                  onRematch={() => {}} 
+                  bestScore={bestScore} 
+                  analysisStage={analysisStage} 
+                  error={error} 
+                  onLegalClick={handleNavigate} 
+                  onEditPreferences={handleEditPreferences}
+                />
+              )}
+              {step === 'settings' && (
+                <SettingsView 
+                  onBack={() => setStep('home')} 
+                  onLegalClick={handleNavigate}
+                />
+              )}
+                  </AnimatePresence>
 
-              if (result) {
-                handleAnalyze();
-              } else {
-                setStep('home');
-              }
-            }} 
-            onLegalClick={(s) => setStep(s)}
-          />
-        )}
-        {step === 'home' && (
-          <HomeView
-            key="home"
-            idea={idea}
-            setIdea={setIdea}
-            mediaContext={mediaContext}
-            setMediaContext={setMediaContext}
-            mediaFile={mediaFile}
-            setMediaFile={setMediaFile}
-            platform={platform}
-            setPlatform={setPlatform}
-            niche={niche}
-            setNiche={setNiche}
-            brutalMode={false} 
-            setBrutalMode={() => {}}
-            feedbackStyle={feedbackStyle}
-            setFeedbackStyle={setFeedbackStyle}
-            onAnalyze={handleAnalyze}
-            onDeepAnalysis={() => setStep('deep_analysis')}
-            error={error}
-            streak={streak}
-            pastIdeas={pastIdeas}
-            bestScore={bestScore}
-            todayBest={todayBest}
-            onResetOnboarding={handleFullReset}
-            onLegalClick={(s: Step) => setStep(s)}
-            onEditPreferences={handleEditPreferences}
-          />
-        )}
-        {step === 'deep_analysis' && (
-          <Suspense fallback={<PageLoading />}>
-            <DeepAnalysisView 
-              onBack={() => setStep('home')} 
-              onLegalClick={(s) => setStep(s)}
+                  {['home', 'deep_analysis', 'settings', 'result'].includes(step) && (
+                    <BottomNav currentStep={step} onNavigate={handleNavigate} />
+                  )}
+                </motion.main>
+              )}
+
+            <AuthModal 
+              isOpen={authModalOpen} 
+              onClose={() => setAuthModalOpen(false)} 
             />
-          </Suspense>
-        )}
-        {step === 'manage_subscription' && (
-          <Suspense fallback={<PageLoading />}>
-            <SubscriptionView onBack={() => setStep('settings')} />
-          </Suspense>
-        )}
-        {step === 'loading' && <LoadingView key="loading" />}
-        {step === 'resetting' && (
-          <motion.div key="resetting" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-            <div className="relative w-24 h-24 mb-8">
-              <div className="absolute inset-0 border-4 border-zinc-800 rounded-full"></div>
-              <motion.div className="absolute inset-0 border-4 border-rose-500 rounded-full border-t-transparent" animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <RotateCcw className="w-8 h-8 text-rose-500 animate-pulse" />
-              </div>
-            </div>
-            <p className="text-zinc-400 font-bold">Resetting your ViralMeets...</p>
-          </motion.div>
-        )}
-        {step === 'result' && result && analysisStage !== 'idle' && (
-          <ResultView 
-            key="result" 
-            result={result} 
-            idea={idea} 
-            mediaFile={mediaFile} 
-            mediaContext={mediaContext} 
-            onReset={reset} 
-            onRematch={() => {}} 
-            bestScore={bestScore} 
-            analysisStage={analysisStage} 
-            error={error} 
-            onLegalClick={(s) => setStep(s)} 
-            onEditPreferences={handleEditPreferences}
-          />
-        )}
-        {step === 'settings' && (
-          <SettingsView 
-            onBack={() => setStep('home')} 
-            onLegalClick={(s) => setStep(s)}
-          />
-        )}
-            </AnimatePresence>
-
-            {['home', 'deep_analysis', 'settings', 'result'].includes(step) && (
-              <BottomNav currentStep={step} onNavigate={(s) => setStep(s)} />
-            )}
-          </motion.main>
-        )}
-
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)} 
-        onNavigate={(s) => setStep(s)}
-      />
+          </>
+        } />
+      </Routes>
     </div>
   );
 }
@@ -1299,7 +1329,7 @@ const HomeView = memo(({
           </motion.div>
         )}
       </AnimatePresence>
-      <Footer onNavigate={onLegalClick} />
+      <Footer />
     </motion.div>
   );
 });

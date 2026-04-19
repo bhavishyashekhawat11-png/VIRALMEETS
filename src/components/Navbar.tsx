@@ -4,6 +4,8 @@ import { cn } from '../lib/utils';
 import { Menu, X, Rocket, LogOut, User as UserIcon, Settings } from 'lucide-react';
 import { ProfileSettingsModal } from './ProfileSettingsModal';
 
+import { Link, useNavigate } from 'react-router-dom';
+
 interface NavbarProps {
   onNavigate: (page: string) => void;
   onAuth: () => void;
@@ -12,6 +14,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, onLogout }) => {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -52,27 +55,21 @@ export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, o
         scrolled ? "bg-zinc-950 px-0 py-3 border-b border-zinc-900" : "bg-transparent py-6"
       )}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <div 
+          <Link 
+            to="/"
             className="flex items-center gap-2 text-2xl font-black tracking-tighter text-white cursor-pointer group"
-            onClick={() => handleNavClick('landing')}
+            onClick={() => setIsMenuOpen(false)}
           >
             <div className="bg-rose-600 p-1.5 rounded-lg group-active:scale-95 transition-transform shadow-[0_0_15px_rgba(225,29,72,0.4)]">
               <Rocket className="w-5 h-5 text-white" />
             </div>
             ViralMeets
-          </div>
+          </Link>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            {navItems.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => handleNavClick(item.path)}
-                className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none"
-              >
-                {item.name}
-              </button>
-            ))}
+            <Link to="/" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none">Home</Link>
+            <button onClick={() => handleNavClick('pricing')} className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none">Pricing</button>
+            <button onClick={() => handleNavClick('about')} className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none">About</button>
           </div>
 
           <div className="hidden md:flex items-center gap-4">

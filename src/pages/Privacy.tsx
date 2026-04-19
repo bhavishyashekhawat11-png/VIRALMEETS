@@ -1,8 +1,8 @@
 import React, { memo } from 'react';
 import { motion } from 'motion/react';
-import { Shield, Lock, Eye, Database, Share2, Settings, Cookie, RefreshCw, Mail, ArrowLeft } from 'lucide-react';
+import { Shield, Lock, Eye, Database, Share2, Settings, Cookie, RefreshCw, Mail } from 'lucide-react';
 
-export const PrivacyPage = memo(() => {
+export const Privacy = memo(() => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -113,4 +113,5 @@ export const PrivacyPage = memo(() => {
   );
 });
 
-PrivacyPage.displayName = 'PrivacyPage';
+Privacy.displayName = 'Privacy';
+export default Privacy;
