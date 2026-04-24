@@ -43,6 +43,20 @@ async function startServer() {
 
   app.use(cors());
 
+  // Allow social media crawlers to pass through without potentially being blocked by other middleware
+  app.use((req, res, next) => {
+    const userAgent = req.headers["user-agent"] || "";
+    if (
+      userAgent.includes("facebookexternalhit") ||
+      userAgent.includes("Facebot") ||
+      userAgent.includes("Twitterbot")
+    ) {
+      // Bots should always be allowed to access public routes
+      return next();
+    }
+    next();
+  });
+
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
