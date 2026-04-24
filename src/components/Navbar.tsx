@@ -33,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, o
 
   const navItems = [
     { name: 'Home', path: 'landing' },
+    { name: 'How It Works', path: 'how_it_works' },
     { name: 'Pricing', path: 'pricing' },
     { name: 'About', path: 'about' }
   ];
@@ -68,6 +69,7 @@ export const Navbar: React.FC<NavbarProps> = memo(({ onNavigate, onAuth, user, o
 
           <div className="hidden md:flex items-center gap-8">
             <Link to="/" className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none">Home</Link>
+            <button onClick={() => handleNavClick('how_it_works')} className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none">How It Works</button>
             <button onClick={() => handleNavClick('pricing')} className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none">Pricing</button>
             <button onClick={() => handleNavClick('about')} className="text-sm font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-widest outline-none">About</button>
           </div>

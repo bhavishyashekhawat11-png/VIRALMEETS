@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Rocket, Check, Lock, X, Sparkles, Zap, BarChart3, Wand2, 
   ChevronDown, ChevronUp, TrendingUp, Target, Activity, 
-  ShieldCheck, CheckCircle2, CreditCard, Clock, ArrowRight
+  ShieldCheck, CheckCircle2, CreditCard, Clock, ArrowRight, Loader2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 interface ComparisonRow {
   feature: string;
@@ -17,6 +18,7 @@ interface ComparisonRow {
 
 export const PricingPage: React.FC = memo(() => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { upgrade, paymentLoading } = useSubscription();
 
   const comparisonData: ComparisonRow[] = useMemo(() => [
     { 
@@ -173,8 +175,12 @@ export const PricingPage: React.FC = memo(() => {
               </li>
             ))}
           </ul>
-          <button className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest transition-all outline-none">
-            Get Started
+          <button 
+            disabled={paymentLoading}
+            onClick={() => upgrade('monthly')}
+            className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest transition-all outline-none flex items-center justify-center gap-2"
+          >
+            {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Get Started'}
           </button>
         </div>
 
@@ -209,9 +215,11 @@ export const PricingPage: React.FC = memo(() => {
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full py-4 bg-rose-600 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all transform-gpu outline-none"
+            disabled={paymentLoading}
+            onClick={() => upgrade('yearly')}
+            className="w-full py-4 bg-rose-600 rounded-2xl disabled:opacity-50 text-center text-sm font-black text-white uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all transform-gpu outline-none flex items-center justify-center gap-2"
           >
-            Go Pro Now 🚀
+            {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Go Pro Now 🚀'}
           </motion.button>
         </div>
       </div>

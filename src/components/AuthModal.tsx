@@ -8,10 +8,11 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
-  signOut
+  signOut,
+  sendEmailVerification
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { X, Mail, Lock, User, ArrowRight, Sparkles, Chrome, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User, ArrowRight, Sparkles, Chrome, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 import { Link } from 'react-router-dom';
@@ -28,6 +29,7 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
   const [method, setMethod] = useState<AuthMethod>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -44,6 +46,15 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
       setMethod('email');
     }
   }, [isOpen]);
+
+  const validations = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+  };
+  const isPasswordValid = Object.values(validations).every(Boolean);
 
   const handleGoogleLogin = async () => {
     setError(null);
@@ -80,7 +91,9 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
           name: user.displayName || 'Creator',
           email: user.email,
           avatar: user.photoURL || '',
-          plan: 'FREE',
+          userPlan: 'FREE',
+          streak: 0,
+          lastActiveDate: null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -134,12 +147,17 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
         const user = userCredential.user;
         await updateProfile(user, { displayName: name });
         
+        // Send verification email
+        await sendEmailVerification(user);
+        
         // Save to Firestore
         await setDoc(doc(db, 'users', user.uid), {
           name,
           email,
           avatar: '',
-          plan: 'FREE',
+          userPlan: 'FREE',
+          streak: 0,
+          lastActiveDate: null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
@@ -242,16 +260,57 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
                 </div>
 
                 {!showForgotPassword && (
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
-                    <input
-                      type="password"
-                      placeholder="Password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all font-medium"
-                    />
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Password"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-4 pl-12 pr-12 text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-rose-500/50 transition-all font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+
+                    {!isLogin && !showForgotPassword && password.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="bg-zinc-950/50 border border-zinc-800/50 rounded-2xl p-4 space-y-2 overflow-hidden"
+                      >
+                        <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-1">Security Strength</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {[
+                            { key: 'length', label: '8+ Characters' },
+                            { key: 'uppercase', label: 'Uppercase' },
+                            { key: 'lowercase', label: 'Lowercase' },
+                            { key: 'number', label: 'Number' },
+                            { key: 'special', label: 'Special' },
+                          ].map((req) => (
+                            <div key={req.key} className="flex items-center gap-2">
+                              <div className={cn(
+                                "w-1.5 h-1.5 rounded-full transition-colors",
+                                validations[req.key as keyof typeof validations] ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-zinc-800"
+                              )} />
+                              <span className={cn(
+                                "text-[10px] font-bold transition-colors",
+                                validations[req.key as keyof typeof validations] ? "text-emerald-500" : "text-zinc-500"
+                              )}>
+                                {req.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
                 )}
 
@@ -282,7 +341,7 @@ export const AuthModal: React.FC<AuthModalProps> = memo(({ isOpen, onClose }) =>
                 )}
 
                 <button
-                  disabled={loading}
+                  disabled={loading || (!isLogin && !showForgotPassword && !isPasswordValid)}
                   className="w-full bg-white text-black font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-zinc-100 active:scale-95 transition-all disabled:opacity-50 outline-none"
                 >
                   {loading ? 'Processing...' : (showForgotPassword ? 'Send Reset Link' : (isLogin ? 'Login' : 'Create Account'))}

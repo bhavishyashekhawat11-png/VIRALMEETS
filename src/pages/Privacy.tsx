@@ -2,6 +2,8 @@ import React, { memo } from 'react';
 import { motion } from 'motion/react';
 import { Shield, Lock, Eye, Database, Share2, Settings, Cookie, RefreshCw, Mail } from 'lucide-react';
 
+import { Helmet } from 'react-helmet-async';
+
 export const Privacy = memo(() => {
   return (
     <motion.div
@@ -10,6 +12,10 @@ export const Privacy = memo(() => {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-4xl mx-auto px-6 py-24 pb-32"
     >
+      <Helmet>
+        <title>Privacy Policy – ViralMeets</title>
+        <meta name="description" content="Your data security is our priority. Read the ViralMeets Privacy Policy." />
+      </Helmet>
       <div className="flex items-center gap-4 mb-12">
         <div className="w-16 h-16 bg-rose-500/10 rounded-3xl flex items-center justify-center border border-rose-500/20 shadow-[0_0_20px_rgba(225,29,72,0.1)]">
           <Shield className="w-8 h-8 text-rose-500" />

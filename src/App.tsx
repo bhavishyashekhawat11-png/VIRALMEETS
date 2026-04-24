@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, lazy, Suspense, memo, useMemo } fro
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { analyzeIdeaQuick, analyzeIdeaDetailed, AnalysisResult, UserProfile, generateProfileInsights, ProfileInsights, executeQuickAction } from './lib/gemini';
-import { RotateCcw, Flame, Skull, AlertTriangle, Sparkles, Share, Dice5, Zap, TrendingUp, ArrowRight, ArrowLeft, Paperclip, Link as LinkIcon, Image as ImageIcon, Video, Clapperboard, X, Trophy, History, Check, RefreshCw, Music, Instagram, Youtube, Brain, Target, BarChart3, Activity, Rocket, Lock, Unlock, ChevronRight, ChevronLeft, FileText, Wand2, AlertCircle, Info, ShieldCheck, CheckCircle2, CreditCard, Clock, RotateCcw as RotateCcwIcon } from 'lucide-react';
+import { RotateCcw, Flame, Skull, AlertTriangle, Sparkles, Share, Dice5, Zap, TrendingUp, ArrowRight, ArrowLeft, Paperclip, Link as LinkIcon, Image as ImageIcon, Video, Clapperboard, X, Trophy, History, Check, RefreshCw, Music, Instagram, Youtube, Brain, Target, BarChart3, Activity, Rocket, Lock, Unlock, ChevronRight, ChevronLeft, FileText, Wand2, AlertCircle, Info, ShieldCheck, CheckCircle2, CreditCard, Clock, RotateCcw as RotateCcwIcon, Loader2 } from 'lucide-react';
 import { cn } from './lib/utils';
 
 // Lazy load non-critical components
@@ -13,6 +13,7 @@ const PricingPage = lazy(() => import('./components/PricingPage').then(m => ({ d
 const AboutPage = lazy(() => import('./components/AboutPage').then(m => ({ default: m.AboutPage })));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Terms = lazy(() => import('./pages/Terms'));
+const HowItWorks = lazy(() => import('./pages/HowItWorks').then(m => ({ default: m.HowItWorks })));
 const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ default: m.LegalPage })));
 
 import { LandingPage } from './components/LandingPage';
@@ -20,12 +21,13 @@ import { FeaturesGrid } from './components/FeaturesGrid';
 import { Navbar } from './components/Navbar';
 import { AppTopBar } from './components/AppTopBar';
 import { AuthModal } from './components/AuthModal';
+import { VerifyEmailView } from './components/VerifyEmailView';
 import { Background } from './components/Background';
 import { Footer } from './components/Footer';
 import { Step, Platform, PastIdea } from './types';
 import { auth, db } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import { SubscriptionProvider, useSubscription } from './contexts/SubscriptionContext';
 import { UpgradeModal } from './components/UpgradeModal';
@@ -62,7 +64,7 @@ const RANDOM_IDEAS = [
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isPro, plan, checkLimit, incrementUsage, setShowUpgradeModal } = useSubscription();
+  const { isPro, userPlan, checkLimit, updateAnalysisCount, setShowUpgradeModal, usageCount } = useSubscription();
   const [step, setStep] = useState<Step>('landing');
   const [analysisStage, setAnalysisStage] = useState<'idle' | 'quick' | 'detailed'>('idle');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -80,50 +82,87 @@ export default function App() {
   const [bestScore, setBestScore] = useState(0);
   const [todayBest, setTodayBest] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (!authUser) {
+        setUser(null);
+        setUserData(null);
+        setStreak(0);
+        setAuthLoading(false);
+        
+        // Protected Route Logic
+        const isAppPage = ['onboarding', 'home', 'deep_analysis', 'manage_subscription', 'result', 'verify_email', 'settings'].includes(step);
+        if (isAppPage) {
+          setStep('landing');
+          setAuthModalOpen(true);
+        }
+        return;
+      }
+
       setUser(authUser);
       
-      if (authUser) {
-        // Fetch profile from Firestore if missing or needs sync
-        try {
-          const userDoc = await getDoc(doc(db, 'users', authUser.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            const profile: UserProfile = {
-              experience: data.experience || 'Just starting',
-              followers: data.followers || 'Under 1K',
-              audienceAge: data.audienceAge || 'Teens',
-              categories: data.categories || [],
-              problem: data.problem || 'Not getting views',
-              goal: data.goal || 'Get more views'
-            };
-            setUserProfile(profile);
-            localStorage.setItem('viralmeets_profile', JSON.stringify(profile));
-          } else {
-            // New user without profile data
-            if (step !== 'onboarding') setStep('onboarding');
-          }
-        } catch (e) {
-          console.error("Error fetching profile:", e);
-        }
+      try {
+        const userRef = doc(db, 'users', authUser.uid);
+        const docSnap = await getDoc(userRef);
 
-        // Post-signup / Post-login redirection
-        if (step === 'landing') {
-          setStep('home');
-          setAuthModalOpen(false);
+        if (!docSnap.exists()) {
+          console.log("Creating document for new user:", authUser.uid);
+          const initialData = {
+            email: authUser.email,
+            onboardingCompleted: false,
+            analysisCount: 0,
+            userPlan: "FREE",
+            streak: 0,
+            lastActiveDate: null,
+            lastResetDate: "",
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp()
+          };
+          await setDoc(userRef, initialData);
+          setUserData(initialData);
+          setStreak(0);
+          setStep('onboarding');
+        } else {
+          const data = docSnap.data();
+          setUserData(data);
+          setStreak(data.streak || 0);
+
+          // Fetch profile for UI
+          const profile: UserProfile = {
+            experience: data.experience || 'Just starting',
+            followers: data.followers || 'Under 1K',
+            audienceAge: data.audienceAge || 'Teens',
+            categories: data.categories || [],
+            problem: data.problem || 'Not getting views',
+            goal: data.goal || 'Get more views'
+          };
+          setUserProfile(profile);
+          localStorage.setItem('viralmeets_profile', JSON.stringify(profile));
+
+          // Post-signup / Post-login redirection
+          if (!authUser.emailVerified) {
+            if (!['landing', 'privacy', 'terms', 'features', 'pricing', 'about', 'refund', 'contact'].includes(step)) {
+              setStep('verify_email');
+            }
+          } else {
+            if (data.onboardingCompleted === false) {
+              if (step !== 'onboarding') setStep('onboarding');
+            } else if (step === 'onboarding' || step === 'verify_email' || step === 'landing') {
+              setStep('home');
+              setAuthModalOpen(false);
+            }
+          }
         }
+      } catch (e) {
+        console.error("Auth sync error:", e);
       }
-      
-      // Protected Route Logic
-      const isAppPage = ['onboarding', 'home', 'deep_analysis', 'manage_subscription', 'result', 'settings'].includes(step);
-      if (!authUser && isAppPage) {
-        setStep('landing');
-        setAuthModalOpen(true);
-      }
+
+      setAuthLoading(false);
     });
     return () => unsubscribe();
   }, [step]);
@@ -134,9 +173,6 @@ export default function App() {
       setUserProfile(JSON.parse(savedProfile));
       setStep('home');
     }
-
-    const savedStreak = localStorage.getItem('viralmeets_streak');
-    if (savedStreak) setStreak(parseInt(savedStreak, 10));
     
     const storedData = localStorage.getItem('viralmeets_data');
     if (storedData) {
@@ -153,18 +189,21 @@ export default function App() {
   }, []);
 
   const handleAnalyze = async () => {
+    console.log("Analyze clicked");
     if (loading) return;
     if (!idea.trim() && !mediaFile && !mediaContext) return;
     
-    // Check daily limit for FREE users
-    if (!checkLimit()) return;
+    // 1. Fetch fresh data and Check daily limit for FREE users
+    const isAllowed = await checkLimit();
+    console.log("isAllowed to analyze?", isAllowed);
+    if (!isAllowed) return;
 
     setLoading(true);
     setStep('loading');
     setAnalysisStage('idle');
     setError(null);
     try {
-      // 1. Quick Analysis
+      // 2. Perform Analysis
       const quickRes = await analyzeIdeaQuick(idea, platform, feedbackStyle, niche, userProfile, mediaContext, mediaFile || undefined);
       
       setResult(quickRes);
@@ -172,8 +211,11 @@ export default function App() {
       setAnalysisStage('quick');
       setLoading(false);
       
-      // Increment usage count
-      incrementUsage();
+      // 3. Increment only after success
+      if (user) {
+        await updateAnalysisCount(user.uid);
+        console.log("Usage incremented after success.");
+      }
       
       try {
         // 2. Detailed Analysis
@@ -182,9 +224,38 @@ export default function App() {
         setResult(detailedRes);
         setAnalysisStage('detailed');
         
-        const newStreak = streak + 1;
-        setStreak(newStreak);
-        localStorage.setItem('viralmeets_streak', newStreak.toString());
+        // Update Streak in Firestore and Local State
+        if (user) {
+          const now = new Date();
+          const today = now.toISOString().split('T')[0];
+          const lastActive = userData?.lastActiveDate;
+          
+          let newStreak = streak;
+          
+          if (lastActive !== today) {
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            if (lastActive === yesterdayStr) {
+              newStreak = (streak || 0) + 1;
+            } else {
+              newStreak = 1;
+            }
+            
+            try {
+              await updateDoc(doc(db, 'users', user.uid), {
+                streak: newStreak,
+                lastActiveDate: today,
+                updatedAt: serverTimestamp()
+              });
+              setUserData((prev: any) => ({ ...prev, streak: newStreak, lastActiveDate: today }));
+            } catch (streakErr) {
+              console.error("Failed to update streak:", streakErr);
+            }
+          }
+          setStreak(newStreak);
+        }
 
         const newIdea: PastIdea = { id: Date.now().toString(), idea: idea || 'Media Idea', score: detailedRes.score, timestamp: Date.now() };
         const updatedIdeas = [newIdea, ...pastIdeas].slice(0, 5);
@@ -229,7 +300,11 @@ export default function App() {
     try {
       await signOut(auth);
       setStep('landing');
-      // Clear any local state if necessary
+      // Clear local state
+      setStreak(0);
+      setPastIdeas([]);
+      setBestScore(0);
+      setTodayBest(0);
       reset();
     } catch (e) {
       console.error("Logout failed:", e);
@@ -238,10 +313,29 @@ export default function App() {
 
   const handleFullReset = () => {
     setStep('resetting');
-    setTimeout(() => {
+    setTimeout(async () => {
       localStorage.removeItem('viralmeets_profile');
-      localStorage.removeItem('viralmeets_streak');
       localStorage.removeItem('viralmeets_data');
+      
+      if (user) {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            streak: 0,
+            lastActiveDate: null,
+            experience: null,
+            followers: null,
+            audienceAge: null,
+            categories: [],
+            problem: null,
+            goal: null,
+            onboardingCompleted: false,
+            updatedAt: serverTimestamp()
+          });
+        } catch (e) {
+          console.error("Firestore reset failed:", e);
+        }
+      }
+
       setUserProfile(null);
       setStreak(0);
       setPastIdeas([]);
@@ -255,16 +349,18 @@ export default function App() {
     }, 1500);
   };
 
-  // Sync step with URL if URL changes to /privacy or /terms
+  // Sync step with URL if URL changes to /privacy, /terms or /how-it-works
   useEffect(() => {
     if (location.pathname === '/privacy') setStep('privacy');
     else if (location.pathname === '/terms') setStep('terms');
-    else if (location.pathname === '/' && ['privacy', 'terms'].includes(step)) setStep('landing');
+    else if (location.pathname === '/how-it-works') setStep('how_it_works');
+    else if (location.pathname === '/' && ['privacy', 'terms', 'how_it_works'].includes(step)) setStep('landing');
   }, [location.pathname]);
 
   const handleNavigate = (s: Step) => {
     if (s === 'privacy') navigate('/privacy');
     else if (s === 'terms') navigate('/terms');
+    else if (s === 'how_it_works') navigate('/how-it-works');
     else {
       setStep(s);
       if (location.pathname !== '/') navigate('/');
@@ -276,6 +372,17 @@ export default function App() {
       <Background />
       <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay"></div>
       
+      {authLoading && (
+        <div className="fixed inset-0 z-[1000] bg-zinc-950 flex flex-col items-center justify-center">
+            <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full shadow-[0_0_20px_rgba(225,29,72,0.3)]"
+            />
+            <p className="mt-4 text-zinc-500 font-black uppercase tracking-widest text-xs animate-pulse">Initializing ViralMeets...</p>
+        </div>
+      )}
+
       <Routes>
         <Route path="/privacy" element={
           <div className="flex flex-col min-h-screen">
@@ -295,9 +402,18 @@ export default function App() {
             <Footer />
           </div>
         } />
+        <Route path="/how-it-works" element={
+          <div className="flex flex-col min-h-screen">
+            <Navbar onNavigate={handleNavigate} onAuth={() => setAuthModalOpen(true)} user={user} onLogout={handleLogout} />
+            <div className="flex-grow">
+              <Suspense fallback={<PageLoading />}><HowItWorks /></Suspense>
+            </div>
+            <Footer />
+          </div>
+        } />
         <Route path="*" element={
           <>
-            {['landing', 'features', 'pricing', 'about', 'refund', 'contact'].includes(step) ? (
+            {['landing', 'features', 'pricing', 'about', 'refund', 'contact', 'how_it_works'].includes(step) ? (
               <div className="flex flex-col min-h-screen">
                 <Navbar 
                   onNavigate={handleNavigate} 
@@ -335,6 +451,12 @@ export default function App() {
                     {step === 'about' && (
                       <Suspense fallback={<PageLoading />}>
                         <AboutPage key="about" />
+                      </Suspense>
+                    )}
+
+                    {step === 'how_it_works' && (
+                      <Suspense fallback={<PageLoading />}>
+                        <HowItWorks key="how_it_works" />
                       </Suspense>
                     )}
 
@@ -400,20 +522,25 @@ support@viralmeets.com`}
                       try {
                         await updateDoc(doc(db, 'users', auth.currentUser.uid), {
                           ...profile,
+                          onboardingCompleted: true,
                           updatedAt: serverTimestamp()
                         });
+                        setUserData((prev: any) => ({ ...prev, onboardingCompleted: true }));
+                        setStep('home');
                       } catch (e) {
                         console.error("Error syncing onboarding profile:", e);
                       }
                     }
-
-                    if (result) {
-                      handleAnalyze();
-                    } else {
-                      setStep('home');
-                    }
                   }} 
                   onLegalClick={handleNavigate}
+                />
+              )}
+              {step === 'verify_email' && (
+                <VerifyEmailView 
+                  key="verify_email"
+                  user={user}
+                  onVerified={() => setStep('home')}
+                  onLogout={handleLogout}
                 />
               )}
               {step === 'home' && (
@@ -443,6 +570,7 @@ support@viralmeets.com`}
                   onResetOnboarding={handleFullReset}
                   onLegalClick={handleNavigate}
                   onEditPreferences={handleEditPreferences}
+                  loading={loading}
                 />
               )}
               {step === 'deep_analysis' && (
@@ -936,7 +1064,8 @@ const HomeView = memo(({
   todayBest,
   onResetOnboarding,
   onLegalClick,
-  onEditPreferences
+  onEditPreferences,
+  loading
 }: {
   key?: string;
   idea: string;
@@ -963,8 +1092,9 @@ const HomeView = memo(({
   onResetOnboarding: () => void;
   onLegalClick: (step: Step) => void;
   onEditPreferences: () => void;
+  loading: boolean;
 }) => {
-  const { isPro } = useSubscription();
+  const { isPro, usageCount } = useSubscription();
   const [showMedia, setShowMedia] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1259,33 +1389,76 @@ const HomeView = memo(({
         </div>
       </div>
 
-      <div className="mt-8 pb-8">
-        {(() => {
-          const hasIdea = idea.trim().length > 0;
-          const hasMedia = mediaContext.trim().length > 0 || mediaFile !== null;
-          if (!hasIdea && !hasMedia) return null;
-          
-          let label = '';
-          if (hasIdea && hasMedia) label = 'Analyzing idea + media';
-          else if (hasIdea) label = 'Analyzing idea';
-          else if (hasMedia) label = 'Analyzing media';
+        <div className="mt-8 pb-8">
+          {(() => {
+            const hasIdea = idea.trim().length > 0;
+            const hasMedia = mediaContext.trim().length > 0 || mediaFile !== null;
+            if (!hasIdea && !hasMedia) return null;
+            
+            let label = '';
+            if (hasIdea && hasMedia) label = 'Analyzing idea + media';
+            else if (hasIdea) label = 'Analyzing idea';
+            else if (hasMedia) label = 'Analyzing media';
 
-          return (
-            <div className="flex justify-center mb-3">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
-                {label}
-              </span>
-            </div>
-          );
-        })()}
-        <button
-          onClick={onAnalyze}
-          disabled={!idea.trim() && !mediaContext.trim() && !mediaFile}
-          className="w-full bg-rose-600 hover:bg-rose-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-semibold py-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-        >
-          Analyze <Sparkles className="w-5 h-5" />
-        </button>
-      </div>
+            return (
+              <div className="flex flex-col items-center gap-3 mb-3">
+                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">
+                  {label}
+                </span>
+                {!isPro && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex gap-1">
+                      {[1, 2, 3].map((i) => (
+                        <div 
+                          key={i} 
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full transition-colors",
+                            i <= usageCount ? "bg-zinc-700" : "bg-rose-500 shadow-[0_0_8px_rgba(225,29,72,0.4)]"
+                          )} 
+                        />
+                      ))}
+                    </div>
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-[0.1em]",
+                      3 - usageCount > 0 ? "text-zinc-500" : "text-rose-500 animate-pulse"
+                    )}>
+                      {3 - usageCount > 0 
+                        ? `${3 - usageCount} analyses left today` 
+                        : "Daily limit reached"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <button
+            onClick={() => onAnalyze()}
+            disabled={loading || (!idea.trim() && !mediaContext.trim() && !mediaFile)}
+            className={cn(
+              "w-full font-semibold py-4 rounded-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2 relative overflow-hidden group",
+              loading 
+                ? "bg-zinc-800 text-zinc-500 border border-zinc-700/50 cursor-not-allowed"
+                : !isPro && usageCount >= 3 
+                  ? "bg-zinc-800 text-zinc-500 border border-zinc-700/50" 
+                  : "bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-900/20"
+            )}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-zinc-500 border-t-white rounded-full animate-spin" />
+                Processing...
+              </div>
+            ) : (!isPro && usageCount >= 3) ? (
+              <>
+                <Lock className="w-4 h-4" /> Limit Reached
+              </>
+            ) : (
+              <>
+                Analyze <Sparkles className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        </div>
 
       <AnimatePresence>
         {showResetModal && (
@@ -1646,13 +1819,25 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
 
           {!isPro && (
             <div className="mt-8 px-2">
-              <button
-                onClick={() => upgrade()}
-                disabled={paymentLoading}
-                className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black py-5 rounded-3xl shadow-xl shadow-rose-900/40 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-              >
-                {paymentLoading ? "Processing..." : "Unlock Full Analysis 🚀"}
-              </button>
+              <div className="bg-rose-600/10 border border-rose-500/20 p-6 rounded-3xl text-center space-y-4 mb-4">
+                <h3 className="text-xl font-black text-white leading-tight">
+                  You’re 2 insights away from a viral video
+                </h3>
+                <p className="text-sm text-rose-200/80 font-medium leading-relaxed">
+                  Your video is losing viewers early. Unlock full breakdown to fix it.
+                </p>
+                <button
+                  onClick={() => upgrade('yearly')}
+                  disabled={paymentLoading}
+                  className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black py-5 rounded-3xl shadow-xl shadow-rose-900/40 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                >
+                  {paymentLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "Unlock Full Analysis 🚀"
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1697,7 +1882,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
             <div className="relative overflow-hidden px-2">
               <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-4">
                 {result.hooks?.map((hook, i) => {
-                  const isLocked = !isPro && i >= 2;
+                  const isLocked = !isPro && i >= 1; // Only 1 free hook
                   return (
                     <motion.div 
                       key={i}
@@ -1712,7 +1897,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                       {isLocked ? (
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm rounded-3xl p-6 text-center">
                           <Lock className="w-6 h-6 text-rose-500 mb-2" />
-                          <p className="text-xs font-bold text-zinc-200 mb-1">Unlock more hooks</p>
+                          <p className="text-xs font-bold text-zinc-200 mb-1">Pro Feature</p>
                           <button onClick={() => upgrade()} className="text-[10px] font-black text-rose-400 uppercase tracking-widest hover:text-rose-300 transition-colors">
                             {paymentLoading ? "Loading..." : "Unlock Full Analysis 🚀"}
                           </button>
@@ -1753,12 +1938,12 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                   >
                     {isLocked && (
                       <button 
-                        onClick={() => setShowUpgradeModal(true)}
+                        onClick={() => upgrade()}
                         className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-950/40 backdrop-blur-[2px] rounded-2xl cursor-pointer group"
                       >
                         <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full shadow-xl group-hover:scale-105 transition-transform">
                           <Lock className="w-3 h-3 text-rose-500" />
-                          <span className="text-[10px] font-bold text-zinc-200">Pro Feature</span>
+                          <span className="text-[10px] font-bold text-zinc-200">Unlock Variations</span>
                         </div>
                       </button>
                     )}
@@ -1822,7 +2007,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                     <div className="bg-zinc-950/80 backdrop-blur-md border border-zinc-800 p-6 rounded-3xl shadow-2xl max-w-[240px]">
                       <Lock className="w-8 h-8 text-rose-500 mx-auto mb-3" />
                       <h4 className="text-sm font-black text-zinc-100 mb-1">Full Script Locked</h4>
-                      <p className="text-[10px] text-zinc-500 mb-4">Get the full structured script with Pro</p>
+                      <p className="text-[10px] text-zinc-500 mb-4">Unlock the full structured script with Pro</p>
                       <button 
                         onClick={() => upgrade()} 
                         disabled={paymentLoading}
@@ -1847,7 +2032,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
             <div className="px-2">
               {!showFullRewrite ? (
                 <button 
-                  onClick={isPro ? handleRewrite : () => setShowUpgradeModal(true)}
+                  onClick={isPro ? handleRewrite : () => upgrade()}
                   disabled={isRewriting}
                   className="w-full bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-black py-5 rounded-3xl shadow-xl shadow-rose-900/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98] disabled:opacity-70 relative group overflow-hidden"
                 >
@@ -1874,7 +2059,7 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-950/60 backdrop-blur-sm p-6 text-center">
                       <Lock className="w-6 h-6 text-rose-500 mb-2" />
                       <p className="text-xs font-bold text-zinc-200 mb-1">Full Rewrite Locked</p>
-                      <button onClick={() => setShowUpgradeModal(true)} className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Upgrade to Pro</button>
+                      <button onClick={() => upgrade()} className="text-[10px] font-black text-rose-400 uppercase tracking-widest">Unlock Now 🚀</button>
                     </div>
                   )}
                   <div className={cn("space-y-3", !isPro && "blur-[3px] select-none")}>
@@ -1899,35 +2084,66 @@ const ResultView = memo(({ result, idea, mediaFile, mediaContext, onReset, onRem
             
             <div className="px-2">
               <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 relative overflow-hidden">
-                {!isPro && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-950/80 backdrop-blur-md p-6 text-center">
-                    <Lock className="w-8 h-8 text-rose-500 mb-3" />
-                    <h4 className="text-sm font-black text-zinc-100 mb-1">Retention Analysis Locked</h4>
-                    <p className="text-[10px] text-zinc-500 mb-4">See exactly where people scroll away</p>
-                    <button onClick={() => setShowUpgradeModal(true)} className="bg-zinc-800 border border-zinc-700 px-6 py-2 rounded-xl text-[10px] font-black text-rose-400 uppercase tracking-widest hover:bg-zinc-700 transition-colors">Unlock Now</button>
-                  </div>
-                )}
-                
-                <div className={cn("space-y-4", !isPro && "blur-[4px] opacity-30 select-none")}>
-                  {result.audience_drop_insights?.map((insight, i) => (
-                    <div key={i} className="flex gap-4">
-                      <div className="w-10 h-10 bg-zinc-950 border border-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-                        <AlertCircle className="w-5 h-5 text-amber-500" />
+                <div className="space-y-4">
+                  {result.audience_drop_insights?.map((insight, i) => {
+                    const isLocked = !isPro && i >= 1; // Only 1 free insight
+                    return (
+                      <div key={i} className="relative">
+                        {isLocked && i === 1 && (
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-b from-zinc-900/60 to-zinc-950/90 backdrop-blur-md rounded-2xl p-4 text-center -mx-2 -my-2 h-[calc(100%+16px)]">
+                            <Lock className="w-6 h-6 text-rose-500 mb-2" />
+                            <h4 className="text-xs font-black text-zinc-100 mb-1">Retention Analysis Locked</h4>
+                            <p className="text-[9px] text-zinc-500 mb-3 leading-tight max-w-[200px]">Unlock exactly where people scroll away and how to fix it.</p>
+                            <button onClick={() => upgrade()} className="bg-rose-600 px-4 py-2 rounded-xl text-[9px] font-black text-white uppercase tracking-widest hover:bg-rose-500 transition-colors">Unlock Full Breakdown 🚀</button>
+                          </div>
+                        )}
+                        <div className={cn("flex gap-4", isLocked && "blur-[4px] opacity-30 select-none")}>
+                          <div className="w-10 h-10 bg-zinc-950 border border-zinc-800 rounded-xl flex items-center justify-center shrink-0">
+                            <AlertCircle className="w-5 h-5 text-amber-500" />
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Drop at {insight.point}</div>
+                            <p className="text-xs text-zinc-300 leading-relaxed">{insight.reason}</p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-0.5">Drop at {insight.point}</div>
-                        <p className="text-xs text-zinc-300 leading-relaxed">{insight.reason}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
           </section>
+
+          {/* PRO ONLY SECTIONS: Creator DNA & Strategy (Show but Blur Always if not Pro) */}
+          {!isPro && (
+             <section className="space-y-4 opacity-75">
+                <div className="flex items-center gap-3 px-2">
+                  <div className="h-px flex-1 bg-zinc-800" />
+                  <h2 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Locked Premium Insights</h2>
+                  <div className="h-px flex-1 bg-zinc-800" />
+                </div>
+
+                <div className="px-2 space-y-4">
+                  <div className="bg-zinc-900/50 border border-zinc-800/50 p-6 rounded-3xl blur-[5px] select-none pointer-events-none relative">
+                     <h3 className="text-xs font-black uppercase text-zinc-500 mb-2">Creator DNA</h3>
+                     <div className="h-2 w-1/2 bg-zinc-800 rounded-full mb-2" />
+                     <div className="h-2 w-3/4 bg-zinc-800 rounded-full mb-2" />
+                     <div className="h-2 w-1/3 bg-zinc-800 rounded-full" />
+                  </div>
+                  
+                  <div className="bg-zinc-900/50 border border-zinc-800/50 p-6 rounded-3xl blur-[5px] select-none pointer-events-none relative">
+                     <h3 className="text-xs font-black uppercase text-zinc-500 mb-2">Improvement Strategy</h3>
+                     <div className="h-2 w-1/2 bg-zinc-800 rounded-full mb-2" />
+                     <div className="h-2 w-2/3 bg-zinc-800 rounded-full mb-2" />
+                     <div className="h-2 w-1/2 bg-zinc-800 rounded-full" />
+                  </div>
+                </div>
+             </section>
+          )}
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 pt-8">
+        <div className="flex gap-3 pt-8 pb-12">
           <button onClick={onReset} className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-4 rounded-2xl border border-zinc-800 transition-all active:scale-95">
             New Idea
           </button>

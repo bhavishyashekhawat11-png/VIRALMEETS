@@ -33,8 +33,8 @@ service cloud.firestore {
     }
 
     function isValidUser(data) {
-      return data.keys().hasOnly(['plan', 'subscriptionId', 'updatedAt']) &&
-             data.plan in ['FREE', 'PRO'];
+      return data.keys().hasOnly(['plan', 'subscriptionId', 'updatedAt', 'analysisCount', 'lastResetDate', 'userPlan', 'role']) ||
+             data.keys().hasAll(['plan']);
     }
 
     // ===============================================================
@@ -46,12 +46,14 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin();
       
       // Only the backend (admin) or the user themselves (with restrictions) can write
-      // Actually, for plan changes, we should only allow the backend.
-      // But for initial setup, we might allow the user to create their FREE profile.
-      allow create: if isOwner(userId) && request.resource.data.plan == 'FREE';
+      allow create: if isOwner(userId) && (request.resource.data.plan == 'FREE' || !('plan' in request.resource.data));
       
-      // Updates to plan should be restricted to admin (backend)
-      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.plan == resource.data.plan);
+      // Allow users to update their own usage count but not their plan
+      allow update: if isAdmin() || (
+        isOwner(userId) && 
+        (request.resource.data.plan == resource.data.plan || !('plan' in request.resource.data)) &&
+        (request.resource.data.userPlan == resource.data.userPlan || !('userPlan' in request.resource.data))
+      );
     }
   }
 }

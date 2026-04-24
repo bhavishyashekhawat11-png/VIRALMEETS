@@ -2,6 +2,8 @@ import React, { memo } from 'react';
 import { motion } from 'motion/react';
 import { FileText, CheckCircle, AlertCircle, UserCheck, ShieldCheck, Scale, History, Mail, XCircle } from 'lucide-react';
 
+import { Helmet } from 'react-helmet-async';
+
 export const Terms = memo(() => {
   return (
     <motion.div
@@ -10,6 +12,10 @@ export const Terms = memo(() => {
       exit={{ opacity: 0, y: -20 }}
       className="max-w-4xl mx-auto px-6 py-24 pb-32"
     >
+      <Helmet>
+        <title>Terms of Service – ViralMeets</title>
+        <meta name="description" content="Read the terms and conditions for using the ViralMeets AI analysis platform." />
+      </Helmet>
       <div className="flex items-center gap-4 mb-12">
         <div className="w-16 h-16 bg-rose-500/10 rounded-3xl flex items-center justify-center border border-rose-500/20 shadow-[0_0_20px_rgba(225,29,72,0.1)]">
           <FileText className="w-8 h-8 text-rose-500" />

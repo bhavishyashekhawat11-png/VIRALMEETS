@@ -18,7 +18,7 @@ interface ComparisonRow {
 }
 
 export function SubscriptionView({ onBack }: { onBack: () => void }) {
-  const { isPro, plan, upgrade, setShowUpgradeModal } = useSubscription();
+  const { isPro, userPlan, upgrade, setShowUpgradeModal } = useSubscription();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const comparisonData: ComparisonRow[] = [

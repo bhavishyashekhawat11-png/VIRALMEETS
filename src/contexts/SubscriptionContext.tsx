@@ -1,18 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 
 interface SubscriptionContextType {
   isPro: boolean;
-  plan: 'FREE' | 'PRO';
+  userPlan: 'FREE' | 'PRO';
   loading: boolean;
   upgrade: (planType?: 'monthly' | 'yearly') => void;
   showUpgradeModal: boolean;
   setShowUpgradeModal: (show: boolean) => void;
   usageCount: number;
   incrementUsage: () => void;
-  checkLimit: () => boolean;
+  updateAnalysisCount: (userId: string) => Promise<void>;
+  checkLimit: () => Promise<boolean>;
   paymentError: string | null;
   paymentLoading: boolean;
 }
@@ -20,48 +21,100 @@ interface SubscriptionContextType {
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const [plan, setPlan] = useState<'FREE' | 'PRO'>(() => {
+  const [userPlan, setUserPlan] = useState<'FREE' | 'PRO'>(() => {
     const saved = localStorage.getItem('viralmeets_plan');
     return (saved as 'FREE' | 'PRO') || 'FREE';
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [analysisCount, setAnalysisCount] = useState(() => {
-    const saved = localStorage.getItem('viralmeets_analysis_count');
-    const lastReset = localStorage.getItem('viralmeets_last_reset_date');
-    const today = new Date().toDateString();
-    
-    if (lastReset !== today) {
-      localStorage.setItem('viralmeets_last_reset_date', today);
-      localStorage.setItem('viralmeets_analysis_count', '0');
-      return 0;
-    }
-    return parseInt(saved || '0', 10);
-  });
-   const [loading, setLoading] = useState(true);
+  const [analysisCount, setAnalysisCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  const getTodayIST = () => {
+    // Returns YYYY-MM-DD in IST
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+  };
+
+  const syncStateFromData = (data: any) => {
+    const currentPlan = data.userPlan || 'FREE';
+    setUserPlan(currentPlan as 'FREE' | 'PRO');
+    localStorage.setItem('viralmeets_plan', currentPlan);
+
+    const lastResetDateStr = data.lastResetDate || "";
+    const today = getTodayIST();
+    
+    if (lastResetDateStr === today) {
+      setAnalysisCount(data.analysisCount || 0);
+    } else {
+      setAnalysisCount(0);
+    }
+
+    if (currentPlan === 'PRO') {
+      setPaymentLoading(false);
+      setShowUpgradeModal(false);
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let snapshotUnsubscribe: (() => void) | null = null;
+
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+        snapshotUnsubscribe = onSnapshot(doc(db, 'users', user.uid), (userDoc) => {
           if (userDoc.exists()) {
-            const data = userDoc.data();
-            const userPlan = data.userPlan || data.plan || 'FREE';
-            setPlan(userPlan as 'FREE' | 'PRO');
-            localStorage.setItem('viralmeets_plan', userPlan);
+            syncStateFromData(userDoc.data());
+          } else {
+            // Handle edge case: User document missing
+            setUserPlan('FREE');
+            setAnalysisCount(0);
           }
-        } catch (e) {
-          console.error("Error fetching user plan:", e);
-        }
+          setLoading(false);
+        }, (error) => {
+          console.error("Firestore snapshot error:", error);
+          setLoading(false);
+        });
+      } else {
+        if (snapshotUnsubscribe) snapshotUnsubscribe();
+        setUserPlan('FREE');
+        setAnalysisCount(0);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      authUnsubscribe();
+      if (snapshotUnsubscribe) snapshotUnsubscribe();
+    };
   }, []);
 
-  const isPro = plan === 'PRO';
+  const refreshUsage = async () => {
+    if (!auth.currentUser) return;
+    setIsRefreshing(true);
+    try {
+      const { getDoc, doc } = await import('firebase/firestore');
+      const userRef = doc(db, 'users', auth.currentUser.uid);
+      // Force fetch from server to get freshest data
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        syncStateFromData(userDoc.data());
+        return userDoc.data();
+      }
+    } catch (e) {
+      console.error("Error refreshing usage:", e);
+    } finally {
+      setIsRefreshing(false);
+    }
+    return null;
+  };
+
+  const isPro = userPlan === 'PRO';
 
   const loadRazorpay = () => {
     return new Promise((resolve) => {
@@ -103,94 +156,172 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    const amount = planType === 'yearly' ? 199900 : 29900;
     const planName = planType === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan';
 
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: amount,
-      currency: "INR",
-      name: "ViralMeets",
-      description: `Upgrade to ${planName}`,
-      image: "https://picsum.photos/seed/viral/200/200",
-      handler: async function (response: any) {
-        console.log("Payment Success", response);
-        try {
-          const userRef = doc(db, 'users', auth.currentUser!.uid);
-          await updateDoc(userRef, {
-            plan: "PRO",
-            userPlan: "PRO",
-            planType: planType,
-            paymentStatus: "success",
-            paymentId: response.razorpay_payment_id,
-            updatedAt: serverTimestamp()
-          });
-          
-          setPlan('PRO');
-          localStorage.setItem('viralmeets_plan', 'PRO');
-          setShowUpgradeModal(false);
-        } catch (e) {
-          console.error("Error updating subscription in Firestore:", e);
-          setPaymentError("Payment successful, but failed to update profile. Please contact support with payment ID: " + response.razorpay_payment_id);
-        } finally {
-          setPaymentLoading(false);
-        }
-      },
-      prefill: {
-        email: auth.currentUser.email || '',
-        name: auth.currentUser.displayName || ''
-      },
-      theme: {
-        color: "#e11d48", // rose-600
-      },
-      modal: {
-        ondismiss: function() {
-          console.log("Payment modal dismissed");
-          setPaymentLoading(false);
-        }
-      }
-    };
-
     try {
+      // Step 1: Create subscription on our secure backend
+      const response = await fetch('/api/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planType,
+          userId: auth.currentUser.uid,
+          userEmail: auth.currentUser.email
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to initiate subscription with server.");
+      }
+
+      const { subscriptionId } = data;
+      console.log("Subscription ID created:", subscriptionId);
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        subscription_id: subscriptionId,
+        name: "ViralMeets",
+        description: `Unlock ${planName}`,
+        image: "https://picsum.photos/seed/viral/200/200",
+        handler: async function (response: any) {
+          console.log("Subscription Success", response);
+          console.log("Waiting for webhook to update status...");
+        },
+        prefill: {
+          email: auth.currentUser.email || '',
+          name: auth.currentUser.displayName || ''
+        },
+        theme: {
+          color: "#e11d48", // rose-600
+        },
+        modal: {
+          ondismiss: function() {
+            console.log("Subscription modal dismissed");
+            setPaymentLoading(false);
+          }
+        }
+      };
+
       const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response: any) {
-        console.error("Payment Failed", response.error);
-        setPaymentError(response.error.description || 'Payment failed. Please try again.');
+      rzp.on('payment.failed', function (resp: any) {
+        console.error("Subscription Payment Failed", resp.error);
+        setPaymentError(resp.error.description || 'Payment failed. Please try again.');
         setPaymentLoading(false);
       });
       rzp.open();
-    } catch (e) {
-      console.error("Error opening Razorpay instance:", e);
-      setPaymentError("Could not initiate payment. Please try again.");
+    } catch (e: any) {
+      console.error("Error in subscription flow:", e);
+      setPaymentError(e.message || "Could not initiate subscription. Please try again.");
       setPaymentLoading(false);
     }
   };
 
-  const incrementUsage = () => {
-    const newCount = analysisCount + 1;
-    setAnalysisCount(newCount);
-    localStorage.setItem('viralmeets_analysis_count', newCount.toString());
+  const incrementUsage = async () => {
+    if (!auth.currentUser) return;
+    try {
+      await updateAnalysisCount(auth.currentUser.uid);
+    } catch (e) {
+      console.error("Error incrementing usage:", e);
+    }
   };
 
-  const checkLimit = () => {
-    if (isPro) return true;
-    if (analysisCount >= 3) {
+  const updateAnalysisCount = async (userId: string) => {
+    try {
+      console.log("Updating count for user:", userId);
+      const userRef = doc(db, "users", userId);
+      
+      // We also handle the daily reset here if we want it to be robust
+      // but the user's requested logic was simple increment.
+      // However, to keep the "Daily" aspect, we should check the reset date.
+      // Since checkLimit already fetches fresh data, we can just increment here.
+      
+      await updateDoc(userRef, {
+        analysisCount: increment(1),
+        updatedAt: serverTimestamp()
+      });
+
+      console.log("analysisCount updated successfully");
+      
+      // Update local state instantly as requested
+      setAnalysisCount(prev => prev + 1);
+      
+      // Optional: Force a refresh to stay synced with other possible server changes
+      // refreshUsage(); 
+    } catch (error) {
+      console.error("Error updating analysisCount:", error);
+    }
+  };
+
+  const checkLimit = async () => {
+    if (!auth.currentUser) return false;
+    
+    const { getDoc, doc, updateDoc } = await import('firebase/firestore');
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+    
+    // 1. Fetch fresh data first (requested for reliability)
+    setIsRefreshing(true);
+    let currentData: any = null;
+    try {
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        currentData = userDoc.data();
+      }
+    } catch (e) {
+      console.error("Error fetching fresh data in checkLimit:", e);
+    } finally {
+      setIsRefreshing(false);
+    }
+
+    if (!currentData) return false;
+
+    // 2. IST Daily Reset Logic
+    const today = getTodayIST();
+    let currentCount = currentData.analysisCount || 0;
+    const currentPlan = currentData.userPlan || 'FREE';
+
+    if (currentData.lastResetDate !== today) {
+      try {
+        await updateDoc(userRef, {
+          analysisCount: 0,
+          lastResetDate: today
+        });
+        currentCount = 0;
+        console.log("Daily limit reset for IST:", today);
+      } catch (e) {
+        console.error("Error resetting daily limit:", e);
+      }
+    }
+
+    // Update local state to match
+    setUserPlan(currentPlan);
+    setAnalysisCount(currentCount);
+
+    if (currentPlan === 'PRO') return true;
+
+    // 3. Final limit logic (3 analyses for FREE)
+    if (currentCount >= 3) {
       setShowUpgradeModal(true);
       return false;
     }
+
     return true;
   };
 
   return (
     <SubscriptionContext.Provider value={{ 
       isPro, 
-      plan, 
+      userPlan, 
       loading, 
       upgrade, 
       showUpgradeModal, 
       setShowUpgradeModal,
       usageCount: analysisCount,
       incrementUsage,
+      updateAnalysisCount,
       checkLimit,
       paymentError,
       paymentLoading

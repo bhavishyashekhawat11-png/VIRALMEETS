@@ -5,13 +5,16 @@ import './index.css';
 import { SubscriptionProvider } from './contexts/SubscriptionContext';
 
 import { BrowserRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <SubscriptionProvider>
-        <App />
-      </SubscriptionProvider>
+      <HelmetProvider>
+        <SubscriptionProvider>
+          <App />
+        </SubscriptionProvider>
+      </HelmetProvider>
     </BrowserRouter>
   </StrictMode>,
 );
