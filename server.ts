@@ -43,13 +43,16 @@ async function startServer() {
 
   app.use(cors());
 
+  // Serve static files from the 'public' directory
+  app.use(express.static(path.join(process.cwd(), "public")));
+
   // 🟢 ALLOW SOCIAL MEDIA CRAWLERS AND PUBLIC ACCESS TO HOMEPAGE (FIX 403)
   app.use((req, res, next) => {
     const userAgent = (req.headers["user-agent"] || "") as string;
-    const path = req.path;
+    const pathName = req.path;
 
     // ALWAYS ALLOW HOMEPAGE & FAVICON/PREVIEW
-    if (path === "/" || path.includes("favicon") || path.includes("preview.png")) {
+    if (pathName === "/" || pathName.includes("favicon") || pathName.includes("preview.png") || pathName.includes("robots.txt")) {
       return next();
     }
 
