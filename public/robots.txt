@@ -9,3 +9,6 @@ Allow: /
 
 User-agent: Twitterbot
 Allow: /
+
+User-agent: WhatsApp
+Allow: /

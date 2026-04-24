@@ -43,15 +43,24 @@ async function startServer() {
 
   app.use(cors());
 
-  // Allow social media crawlers to pass through without potentially being blocked by other middleware
+  // 🟢 ALLOW SOCIAL MEDIA CRAWLERS AND PUBLIC ACCESS TO HOMEPAGE (FIX 403)
   app.use((req, res, next) => {
-    const userAgent = req.headers["user-agent"] || "";
+    const userAgent = (req.headers["user-agent"] || "") as string;
+    const path = req.path;
+
+    // ALWAYS ALLOW HOMEPAGE & FAVICON/PREVIEW
+    if (path === "/" || path.includes("favicon") || path.includes("preview.png")) {
+      return next();
+    }
+
+    // ALLOW SOCIAL MEDIA CRAWLERS
     if (
       userAgent.includes("facebookexternalhit") ||
       userAgent.includes("Facebot") ||
-      userAgent.includes("Twitterbot")
+      userAgent.includes("Twitterbot") ||
+      userAgent.includes("WhatsApp")
     ) {
-      // Bots should always be allowed to access public routes
+      // Bots should always be allowed to access public routes and metadata
       return next();
     }
     next();
