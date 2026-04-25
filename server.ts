@@ -43,31 +43,43 @@ async function startServer() {
 
   app.use(cors());
 
-  // Serve static files from the 'public' directory
-  app.use(express.static(path.join(process.cwd(), "public")));
-
-  // 🟢 ALLOW SOCIAL MEDIA CRAWLERS AND PUBLIC ACCESS TO HOMEPAGE (FIX 403)
+  // 🟢 ALLOW ALL STATIC FILES & CRAWLERS (FIX 403 & REDIRECTS)
   app.use((req, res, next) => {
+    const pathname = req.path;
     const userAgent = (req.headers["user-agent"] || "") as string;
-    const pathName = req.path;
 
-    // ALWAYS ALLOW HOMEPAGE & FAVICON/PREVIEW
-    if (pathName === "/" || pathName.includes("favicon") || pathName.includes("preview.png") || pathName.includes("robots.txt")) {
+    // 🟢 ALLOW ALL STATIC FILES (CRITICAL FIX)
+    if (
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/favicon") ||
+      pathname.startsWith("/images") ||
+      pathname.startsWith("/icons") ||
+      pathname.startsWith("/public") ||
+      pathname.match(/\.(png|jpg|jpeg|webp|svg|ico|txt|xml)$/)
+    ) {
       return next();
     }
 
-    // ALLOW SOCIAL MEDIA CRAWLERS
+    // 🟢 DO NOT BLOCK HOMEPAGE
+    if (pathname === "/") {
+      return next();
+    }
+
+    // 🟢 ALLOW SOCIAL MEDIA CRAWLERS
     if (
       userAgent.includes("facebookexternalhit") ||
       userAgent.includes("Facebot") ||
       userAgent.includes("Twitterbot") ||
       userAgent.includes("WhatsApp")
     ) {
-      // Bots should always be allowed to access public routes and metadata
       return next();
     }
+    
     next();
   });
+
+  // Serve static files from the 'public' directory
+  app.use(express.static(path.join(__dirname, "public")));
 
   // API Routes
   app.get("/api/health", (req, res) => {
