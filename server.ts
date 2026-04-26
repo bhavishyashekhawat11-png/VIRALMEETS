@@ -42,7 +42,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(cors());
-  app.use(express.static(path.join(process.cwd(), "public")));
+  app.use(express.static(path.join(__dirname, "public")));
 
   // API Routes
   app.get("/api/health", (req, res) => {

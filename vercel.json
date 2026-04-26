@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/(favicon.png|preview.png|sitemap.xml|robots.txt)",
+      "destination": "/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
