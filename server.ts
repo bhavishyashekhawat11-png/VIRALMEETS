@@ -41,10 +41,11 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Enable CORS for all requests, including static assets
+  app.use(cors());
+
   // 1. Serve static files from the /public directory as top priority
   app.use(express.static(path.join(__dirname, "public")));
-
-  app.use(cors());
 
   // API Routes
   app.get("/api/health", (req, res) => {
