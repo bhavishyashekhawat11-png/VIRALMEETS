@@ -41,11 +41,22 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // 1. Serve static files from the /public directory as top priority (Fixed: priority routing)
+  app.use(express.static(path.join(__dirname, "public"), {
+    etag: false,
+    acceptRanges: false,
+    setHeaders: (res, filePath) => {
+      // Explicitly disable range support in headers
+      res.setHeader('Accept-Ranges', 'none');
+      // Ensure specific file types (like png) are never cached or served as partials
+      if (filePath.endsWith('.png')) {
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      }
+    }
+  }));
+
   // Enable CORS for all requests, including static assets
   app.use(cors());
-
-  // 1. Serve static files from the /public directory as top priority
-  app.use(express.static(path.join(__dirname, "public")));
 
   // API Routes
   app.get("/api/health", (req, res) => {
