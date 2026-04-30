@@ -1,77 +1,48 @@
-const Razorpay = require('razorpay');
+import Razorpay from 'razorpay';
 
-module.exports = async (req, res) => {
-  // 1. Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  // Allow only POST
+// This is your Serverless Function handler for Vercel
+export default async function handler(req, res) {
+  // 1. Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      error: 'Method Not Allowed',
-      message: 'Please use POST method to create an order.'
-    });
-  }
-
-  // 2. Fail-safe Configuration Check
-  const keyId = process.env.VITE_RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-
-  if (!keyId || !keySecret) {
-    console.error('CRITICAL: Razorpay API Keys are missing in environment variables.');
-    return res.status(400).json({ 
-      error: 'Missing API Keys',
-      message: 'The server is not configured with Razorpay credentials. Please check environment variables.'
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // 3. Robust Body Validation
-    const body = req.body || {};
-    const { planType } = body;
-    
-    if (!planType) {
-      return res.status(400).json({ 
-        error: 'Invalid Request',
-        message: 'planType is required in the request body (monthly or yearly).' 
-      });
-    }
-
-    // Initialize Razorpay
+    // 2. Initialize Razorpay with your Environment Variables
+    // Make sure these names match exactly what you put in Vercel Settings
     const razorpay = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
 
-    const amount = planType === 'monthly' ? 29900 : planType === 'yearly' ? 199900 : 0;
+    // 3. Get the amount from the frontend request
+    const { amount, currency = "INR" } = req.body;
 
-    if (amount === 0) {
-      return res.status(400).json({ 
-        error: 'Invalid Plan',
-        message: `Plan type "${planType}" is not recognized. use "monthly" or "yearly".` 
-      });
+    if (!amount) {
+      return res.status(400).json({ error: 'Amount is required' });
     }
 
+    // 4. Create the order options
     const options = {
-      amount,
-      currency: 'INR',
-      receipt: `receipt_${Date.now()}`,
+      amount: amount * 100, // Razorpay expects subunits (e.g., 100 paise = 1 INR)
+      currency: currency,
+      receipt: `receipt_order_${Date.now()}`,
     };
 
+    // 5. Generate the order
     const order = await razorpay.orders.create(options);
+
+    // 6. Send success response back to your React frontend
     return res.status(200).json(order);
+
   } catch (error) {
-    console.error('Razorpay Order Error:', error);
+    // This logs the real error to your Vercel Dashboard
+    console.error("RAZORPAY ERROR:", error);
+
+    // This ensures your frontend stays stable and gets a JSON error
     return res.status(500).json({ 
-      error: 'Order creation failed', 
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: "Failed to create Razorpay order",
+      details: error.message 
     });
   }
-};
+}
