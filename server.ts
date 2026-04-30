@@ -66,25 +66,21 @@ async function startServer() {
   });
 
   // Create Order Endpoint
-  app.all("/api/create-order", express.json(), async (req, res) => {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method Not Allowed" });
-    }
-
+  app.post("/api/create-order", express.json(), async (req, res) => {
     try {
-      const { plan } = req.body;
+      const { planType } = req.body;
       
-      if (!plan) {
-        return res.status(400).json({ error: "Plan is required" });
+      if (!planType) {
+        return res.status(400).json({ error: "planType is required" });
       }
 
       // Initialize Razorpay lazily
       const rzp = getRazorpay();
 
-      const amount = plan === "monthly" ? 299 * 100 : plan === "yearly" ? 1999 * 100 : 0;
+      const amount = planType === "monthly" ? 299 * 100 : planType === "yearly" ? 1999 * 100 : 0;
 
       if (amount === 0) {
-        return res.status(400).json({ error: "Invalid plan type" });
+        return res.status(400).json({ error: "Invalid planType" });
       }
 
       const options = {

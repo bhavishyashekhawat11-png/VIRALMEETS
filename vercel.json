@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/create-order",
+      "destination": "/api/create-order.js"
+    },
+    {
       "source": "/(favicon.png|preview.png|sitemap.xml|robots.txt)",
       "destination": "/$1"
     },
