@@ -8,6 +8,7 @@ interface SubscriptionContextType {
   userPlan: 'FREE' | 'PRO';
   loading: boolean;
   upgrade: (planType?: 'monthly' | 'yearly') => void;
+  handlePayment: (planType: 'monthly' | 'yearly') => Promise<void>;
   showUpgradeModal: boolean;
   setShowUpgradeModal: (show: boolean) => void;
   usageCount: number;
@@ -131,93 +132,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   };
 
   const upgrade = async (planType: 'monthly' | 'yearly' = 'monthly') => {
-    console.log("Payment triggered", { planType, user: auth.currentUser?.email });
-    
-    if (!auth.currentUser) {
-      setPaymentError("Please sign in to upgrade.");
-      return;
-    }
-    
-    setPaymentLoading(true);
-    setPaymentError(null);
-
-    const scriptLoaded = await loadRazorpay();
-    if (!scriptLoaded) {
-      console.error("Razorpay script failed to load");
-      setPaymentError("Could not load payment gateway. Please check your connection.");
-      setPaymentLoading(false);
-      return;
-    }
-
-    if (!window.Razorpay) {
-      console.error("window.Razorpay not found after script load");
-      setPaymentError("Payment system is currently unavailable. Please try again later.");
-      setPaymentLoading(false);
-      return;
-    }
-
-    const planName = planType === 'yearly' ? 'Yearly Pro Plan' : 'Monthly Pro Plan';
-
-    try {
-      // Step 1: Create subscription on our secure backend
-      const response = await fetch('/api/create-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          planType,
-          userId: auth.currentUser.uid,
-          userEmail: auth.currentUser.email
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to initiate subscription with server.");
-      }
-
-      const { subscriptionId } = data;
-      console.log("Subscription ID created:", subscriptionId);
-
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        subscription_id: subscriptionId,
-        name: "ViralMeets",
-        description: `Unlock ${planName}`,
-        image: "https://picsum.photos/seed/viral/200/200",
-        handler: async function (response: any) {
-          console.log("Subscription Success", response);
-          console.log("Waiting for webhook to update status...");
-        },
-        prefill: {
-          email: auth.currentUser.email || '',
-          name: auth.currentUser.displayName || ''
-        },
-        theme: {
-          color: "#e11d48", // rose-600
-        },
-        modal: {
-          ondismiss: function() {
-            console.log("Subscription modal dismissed");
-            setPaymentLoading(false);
-          }
-        }
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (resp: any) {
-        console.error("Subscription Payment Failed", resp.error);
-        setPaymentError(resp.error.description || 'Payment failed. Please try again.');
-        setPaymentLoading(false);
-      });
-      rzp.open();
-    } catch (e: any) {
-      console.error("Error in subscription flow:", e);
-      setPaymentError(e.message || "Could not initiate subscription. Please try again.");
-      setPaymentLoading(false);
-    }
+    return handlePayment(planType);
   };
 
   const incrementUsage = async () => {
@@ -311,12 +226,88 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return true;
   };
 
+  const handlePayment = async (planType: 'monthly' | 'yearly') => {
+    if (!auth.currentUser) {
+      setPaymentError("Please sign in to upgrade.");
+      return;
+    }
+
+    setPaymentLoading(true);
+    setPaymentError(null);
+
+    try {
+      const scriptLoaded = await loadRazorpay();
+      if (!scriptLoaded) throw new Error("Razorpay SDK failed to load");
+
+      const response = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planType })
+      });
+
+      const order = await response.json();
+      if (!response.ok) throw new Error(order.error || "Failed to create order");
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "ViralMeets",
+        description: `${planType === 'monthly' ? 'Monthly' : 'Yearly'} Pro Plan`,
+        order_id: order.id,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch('/api/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...response,
+                userId: auth.currentUser?.uid,
+                planType
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok) {
+              setUserPlan('PRO');
+              setShowUpgradeModal(false);
+            } else {
+              throw new Error(verifyData.error || "Payment verification failed");
+            }
+          } catch (err: any) {
+            setPaymentError(err.message);
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        prefill: {
+          email: auth.currentUser.email || "",
+          name: auth.currentUser.displayName || ""
+        },
+        theme: {
+          color: "#e11d48",
+        },
+        modal: {
+          ondismiss: () => setPaymentLoading(false)
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (error: any) {
+      console.error("Payment Error:", error);
+      setPaymentError(error.message || "Something went wrong during payment initialization");
+      setPaymentLoading(false);
+    }
+  };
+
   return (
     <SubscriptionContext.Provider value={{ 
       isPro, 
       userPlan, 
       loading, 
       upgrade, 
+      handlePayment,
       showUpgradeModal, 
       setShowUpgradeModal,
       usageCount: analysisCount,

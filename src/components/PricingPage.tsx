@@ -18,7 +18,7 @@ interface ComparisonRow {
 
 export const PricingPage: React.FC = memo(() => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { upgrade, paymentLoading } = useSubscription();
+  const { handlePayment, paymentLoading } = useSubscription();
 
   const comparisonData: ComparisonRow[] = useMemo(() => [
     { 
@@ -177,7 +177,7 @@ export const PricingPage: React.FC = memo(() => {
           </ul>
           <button 
             disabled={paymentLoading}
-            onClick={() => upgrade('monthly')}
+            onClick={() => handlePayment('monthly')}
             className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 rounded-2xl text-center text-sm font-black text-white uppercase tracking-widest transition-all outline-none flex items-center justify-center gap-2"
           >
             {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Get Started'}
@@ -216,7 +216,7 @@ export const PricingPage: React.FC = memo(() => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={paymentLoading}
-            onClick={() => upgrade('yearly')}
+            onClick={() => handlePayment('yearly')}
             className="w-full py-4 bg-rose-600 rounded-2xl disabled:opacity-50 text-center text-sm font-black text-white uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all transform-gpu outline-none flex items-center justify-center gap-2"
           >
             {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Go Pro Now 🚀'}

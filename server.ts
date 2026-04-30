@@ -41,15 +41,89 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // 1. Serve static files from the /public directory as top priority (Fixed: priority routing)
+  app.use(express.static(path.join(__dirname, "public"), {
+    etag: false,
+    acceptRanges: false,
+    setHeaders: (res, filePath) => {
+      // Explicitly disable range support in headers
+      res.setHeader('Accept-Ranges', 'none');
+      // Ensure specific file types (like png) are never cached or served as partials
+      if (filePath.endsWith('.png')) {
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      }
+    }
+  }));
+
   // Enable CORS for all requests, including static assets
   app.use(cors());
-
-  // 1. Serve static files from the /public directory as top priority
-  app.use(express.static(path.join(__dirname, "public")));
 
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Create Order Endpoint
+  app.post("/api/create-order", express.json(), async (req, res) => {
+    const { planType } = req.body;
+    let amount = 0;
+
+    if (planType === "monthly") {
+      amount = 299 * 100; // 299 INR in paise
+    } else if (planType === "yearly") {
+      amount = 1999 * 100; // 1999 INR in paise
+    } else {
+      return res.status(400).json({ error: "Invalid plan type" });
+    }
+
+    try {
+      const options = {
+        amount,
+        currency: "INR",
+        receipt: `receipt_${Date.now()}`,
+      };
+
+      const order = await razorpay.orders.create(options);
+      res.json(order);
+    } catch (error) {
+      console.error("Error creating Razorpay order:", error);
+      res.status(500).json({ error: "Failed to create order" });
+    }
+  });
+
+  // Verify Payment Endpoint
+  app.post("/api/verify-payment", express.json(), async (req, res) => {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, planType } = req.body;
+
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+      .update(body.toString())
+      .digest("hex");
+
+    if (expectedSignature === razorpay_signature) {
+      // Signature verified
+      try {
+        if (userId) {
+          await db.collection("users").doc(userId).set({
+            plan: "PRO",
+            userPlan: "PRO",
+            lastPaymentId: razorpay_payment_id,
+            lastOrderId: razorpay_order_id,
+            planType,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          console.log(`User ${userId} upgraded to PRO via order verification`);
+        }
+        res.json({ status: "ok" });
+      } catch (error) {
+        console.error("Error updating user after payment verification:", error);
+        res.status(500).json({ error: "Failed to update user status" });
+      }
+    } else {
+      res.status(400).json({ error: "Invalid signature" });
+    }
   });
 
   // Create Subscription Endpoint
