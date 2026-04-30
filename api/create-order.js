@@ -15,24 +15,38 @@ export default async function handler(req, res) {
       key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
 
-    // 3. Get the amount from the frontend request
-    const { amount, currency = "INR" } = req.body;
+    // 3. Get info from request body
+    const { planType, currency = "INR" } = req.body;
+    console.log("Plan Type Received:", planType);
 
-    if (!amount) {
-      return res.status(400).json({ error: 'Amount is required' });
+    if (!planType) {
+      return res.status(400).json({ error: 'planType is required' });
     }
 
-    // 4. Create the order options
+    // 4. Calculate amount based on planType (Monthly: 299, Yearly: 1999)
+    let amountInPaise = 0;
+    if (planType === 'monthly') {
+      amountInPaise = 299 * 100;
+    } else if (planType === 'yearly') {
+      amountInPaise = 1999 * 100;
+    } else {
+      return res.status(400).json({ error: `Invalid plan type: ${planType}` });
+    }
+
+    // Ensure it's an integer
+    const finalAmount = Math.round(amountInPaise);
+
+    // 5. Create the order options
     const options = {
-      amount: amount * 100, // Razorpay expects subunits (e.g., 100 paise = 1 INR)
+      amount: finalAmount,
       currency: currency,
       receipt: `receipt_order_${Date.now()}`,
     };
 
-    // 5. Generate the order
+    // 6. Generate the order
     const order = await razorpay.orders.create(options);
 
-    // 6. Send success response back to your React frontend
+    // 7. Send success response back to your React frontend
     return res.status(200).json(order);
 
   } catch (error) {
@@ -41,8 +55,7 @@ export default async function handler(req, res) {
 
     // This ensures your frontend stays stable and gets a JSON error
     return res.status(500).json({ 
-      error: "Failed to create Razorpay order",
-      details: error.message 
+      error: error.description || error.message || "Failed to create Razorpay order"
     });
   }
 }

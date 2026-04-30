@@ -95,7 +95,8 @@ async function startServer() {
         key_secret: keySecret,
       });
 
-      const amount = planType === "monthly" ? 299 * 100 : planType === "yearly" ? 1999 * 100 : 0;
+      const amountInPaise = planType === "monthly" ? 299 * 100 : planType === "yearly" ? 1999 * 100 : 0;
+      const amount = Math.round(amountInPaise);
 
       if (amount === 0) {
         return res.status(400).json({ 
@@ -115,8 +116,7 @@ async function startServer() {
     } catch (error: any) {
       console.error("Create Order Error:", error);
       res.status(500).json({ 
-        error: "Order creation failed",
-        message: error.message 
+        error: error.description || error.message || "Order creation failed"
       });
     }
   });
