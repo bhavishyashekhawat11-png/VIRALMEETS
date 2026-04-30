@@ -71,16 +71,37 @@ async function startServer() {
       const { planType } = req.body;
       
       if (!planType) {
-        return res.status(400).json({ error: "planType is required" });
+        return res.status(400).json({ 
+          error: "Invalid Request",
+          message: "planType is required in the request body (monthly or yearly)." 
+        });
+      }
+
+      // Fail-safe Configuration Check
+      const keyId = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+      if (!keyId || !keySecret) {
+        console.error('CRITICAL: Razorpay API Keys are missing in environment variables.');
+        return res.status(400).json({ 
+          error: 'Missing API Keys',
+          message: 'The server is not configured with Razorpay credentials. Please check environment variables.'
+        });
       }
 
       // Initialize Razorpay lazily
-      const rzp = getRazorpay();
+      const rzp = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret,
+      });
 
       const amount = planType === "monthly" ? 299 * 100 : planType === "yearly" ? 1999 * 100 : 0;
 
       if (amount === 0) {
-        return res.status(400).json({ error: "Invalid planType" });
+        return res.status(400).json({ 
+          error: "Invalid Plan",
+          message: `Plan type "${planType}" is not recognized. Use "monthly" or "yearly".` 
+        });
       }
 
       const options = {
@@ -91,9 +112,12 @@ async function startServer() {
 
       const order = await rzp.orders.create(options);
       res.json(order);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create Order Error:", error);
-      res.status(500).json({ error: "Order creation failed" });
+      res.status(500).json({ 
+        error: "Order creation failed",
+        message: error.message 
+      });
     }
   });
 

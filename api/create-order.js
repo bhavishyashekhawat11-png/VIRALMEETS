@@ -8,31 +8,54 @@ module.exports = async (req, res) => {
 
   // Handle preflight request
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
+  // Allow only POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.status(405).json({ 
+      error: 'Method Not Allowed',
+      message: 'Please use POST method to create an order.'
+    });
+  }
+
+  // 2. Fail-safe Configuration Check
+  const keyId = process.env.VITE_RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  if (!keyId || !keySecret) {
+    console.error('CRITICAL: Razorpay API Keys are missing in environment variables.');
+    return res.status(400).json({ 
+      error: 'Missing API Keys',
+      message: 'The server is not configured with Razorpay credentials. Please check environment variables.'
+    });
   }
 
   try {
-    const { planType } = req.body;
+    // 3. Robust Body Validation
+    const body = req.body || {};
+    const { planType } = body;
     
     if (!planType) {
-      return res.status(400).json({ error: 'planType is required' });
+      return res.status(400).json({ 
+        error: 'Invalid Request',
+        message: 'planType is required in the request body (monthly or yearly).' 
+      });
     }
 
     // Initialize Razorpay
     const razorpay = new Razorpay({
-      key_id: process.env.VITE_RAZORPAY_KEY_ID || '',
-      key_secret: process.env.RAZORPAY_KEY_SECRET || '',
+      key_id: keyId,
+      key_secret: keySecret,
     });
 
     const amount = planType === 'monthly' ? 29900 : planType === 'yearly' ? 199900 : 0;
 
     if (amount === 0) {
-      return res.status(400).json({ error: 'Invalid planType' });
+      return res.status(400).json({ 
+        error: 'Invalid Plan',
+        message: `Plan type "${planType}" is not recognized. use "monthly" or "yearly".` 
+      });
     }
 
     const options = {
@@ -42,12 +65,13 @@ module.exports = async (req, res) => {
     };
 
     const order = await razorpay.orders.create(options);
-    res.status(200).json(order);
+    return res.status(200).json(order);
   } catch (error) {
     console.error('Razorpay Order Error:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Order creation failed', 
-      details: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
