@@ -242,11 +242,20 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const response = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planType })
+        body: JSON.stringify({ plan: planType })
       });
 
-      const order = await response.json();
-      if (!response.ok) throw new Error(order.error || "Failed to create order");
+      const contentType = response.headers.get("content-type");
+      let order: any;
+      
+      if (contentType && contentType.includes("application/json")) {
+        order = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
+      }
+
+      if (!response.ok) throw new Error(order.error || `Order API failed with status ${response.status}`);
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,

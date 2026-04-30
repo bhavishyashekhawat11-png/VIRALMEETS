@@ -26,11 +26,13 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "",
-});
+// Razorpay helper for lazy initialization
+const getRazorpay = () => {
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "",
+    key_secret: process.env.RAZORPAY_KEY_SECRET || "",
+  });
+};
 
 const PLAN_IDS: Record<string, string> = {
   monthly: process.env.RAZORPAY_PLAN_MONTHLY || "",
@@ -64,30 +66,38 @@ async function startServer() {
   });
 
   // Create Order Endpoint
-  app.post("/api/create-order", express.json(), async (req, res) => {
-    const { planType } = req.body;
-    let amount = 0;
-
-    if (planType === "monthly") {
-      amount = 299 * 100; // 299 INR in paise
-    } else if (planType === "yearly") {
-      amount = 1999 * 100; // 1999 INR in paise
-    } else {
-      return res.status(400).json({ error: "Invalid plan type" });
+  app.all("/api/create-order", express.json(), async (req, res) => {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method Not Allowed" });
     }
 
     try {
+      const { plan } = req.body;
+      
+      if (!plan) {
+        return res.status(400).json({ error: "Plan is required" });
+      }
+
+      // Initialize Razorpay lazily
+      const rzp = getRazorpay();
+
+      const amount = plan === "monthly" ? 299 * 100 : plan === "yearly" ? 1999 * 100 : 0;
+
+      if (amount === 0) {
+        return res.status(400).json({ error: "Invalid plan type" });
+      }
+
       const options = {
         amount,
         currency: "INR",
         receipt: `receipt_${Date.now()}`,
       };
 
-      const order = await razorpay.orders.create(options);
+      const order = await rzp.orders.create(options);
       res.json(order);
     } catch (error) {
-      console.error("Error creating Razorpay order:", error);
-      res.status(500).json({ error: "Failed to create order" });
+      console.error("Create Order Error:", error);
+      res.status(500).json({ error: "Order creation failed" });
     }
   });
 
@@ -97,6 +107,7 @@ async function startServer() {
 
     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
+    // Use a fresh Hmac instance with secret
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
       .update(body.toString())
@@ -139,7 +150,8 @@ async function startServer() {
     try {
       console.log("Attempting to create subscription for plan:", PLAN_IDS[planType]);
       
-      const subscription = await razorpay.subscriptions.create({
+      const rzp = getRazorpay();
+      const subscription = await rzp.subscriptions.create({
         plan_id: PLAN_IDS[planType],
         customer_notify: true, // Use boolean instead of number
         total_count: planType === 'yearly' ? 12 : 60,
