@@ -15,6 +15,7 @@ interface SubscriptionContextType {
   incrementUsage: () => void;
   updateAnalysisCount: (userId: string) => Promise<void>;
   checkLimit: () => Promise<boolean>;
+  refreshStatus: () => Promise<void>;
   paymentError: string | null;
   paymentLoading: boolean;
 }
@@ -242,7 +243,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const response = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planType })
+        body: JSON.stringify({ 
+          planType,
+          userId: auth.currentUser.uid 
+        })
       });
 
       const contentType = response.headers.get("content-type");
@@ -310,6 +314,22 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   };
 
+  const refreshStatus = async () => {
+    if (!auth.currentUser) return;
+    setLoading(true);
+    try {
+      const { getDoc, doc } = await import('firebase/firestore');
+      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      if (userDoc.exists()) {
+        syncStateFromData(userDoc.data());
+      }
+    } catch (err) {
+      console.error("Error refreshing status:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SubscriptionContext.Provider value={{ 
       isPro, 
@@ -323,6 +343,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       incrementUsage,
       updateAnalysisCount,
       checkLimit,
+      refreshStatus,
       paymentError,
       paymentLoading
     }}>

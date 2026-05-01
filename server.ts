@@ -242,18 +242,44 @@ async function startServer() {
           }, { merge: true });
           console.log(`User ${userId} upgraded to PRO via membership charge`);
         }
-      } else if (event.event === "subscription.cancelled" || event.event === "subscription.halted") {
-        const subscription = payload.subscription.entity;
-        const userId = subscription.notes?.userId;
+      } else if (event.event === "payment.captured" || event.event === "order.paid") {
+        // Handle one-time payments from create-order
+        const payment = payload.payment?.entity || payload.order?.entity;
+        const userId = payment?.notes?.userId || payment?.notes?.user_id;
+
+        if (userId) {
+          await db.collection("users").doc(userId).set({
+            plan: "PRO",
+            userPlan: "PRO",
+            lastPaymentId: payload.payment?.entity?.id,
+            lastOrderId: payload.order?.entity?.id || payload.payment?.entity?.order_id,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          console.log(`User ${userId} upgraded to PRO via payment/order capture`);
+        }
+      } else if (event.event === "subscription.cancelled" || event.event === "subscription.halted" || event.event === "payment.failed") {
+        const entity = payload.subscription?.entity || payload.payment?.entity;
+        const userId = entity?.notes?.userId || entity?.notes?.user_id;
 
         if (userId) {
           await db.collection("users").doc(userId).set({
             plan: "FREE",
             userPlan: "FREE",
-            subscriptionStatus: subscription.status,
+            subscriptionStatus: payload.subscription?.entity?.status || "failed",
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
-          console.log(`User ${userId} downgraded to FREE due to cancellation`);
+          console.log(`User ${userId} downgraded to FREE due to failure or cancellation`);
+        }
+      } else if (event.event === "refund.processed") {
+        const payment = payload.payment.entity;
+        const userId = payment.notes?.userId;
+        if (userId) {
+          await db.collection("users").doc(userId).set({
+            plan: "FREE",
+            userPlan: "FREE",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          console.log(`User ${userId} downgraded to FREE due to refund`);
         }
       }
 

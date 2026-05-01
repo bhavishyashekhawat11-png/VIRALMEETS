@@ -18,7 +18,7 @@ interface ComparisonRow {
 
 export const PricingPage: React.FC = memo(() => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { handlePayment, paymentLoading } = useSubscription();
+  const { handlePayment, paymentLoading, refreshStatus } = useSubscription();
 
   const comparisonData: ComparisonRow[] = useMemo(() => [
     { 
@@ -221,6 +221,16 @@ export const PricingPage: React.FC = memo(() => {
           >
             {paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Go Pro Now 🚀'}
           </motion.button>
+          
+          {paymentLoading && (
+            <button 
+              onClick={() => refreshStatus()}
+              className="w-full mt-4 text-[10px] font-black text-rose-500 hover:text-rose-400 uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all animate-pulse"
+            >
+              <Activity className="w-3 h-3" />
+              Check Payment Status
+            </button>
+          )}
         </div>
       </div>
 

@@ -5,6 +5,10 @@
       "destination": "/api/create-order.js"
     },
     {
+      "source": "/api/webhook",
+      "destination": "/api/webhook.js"
+    },
+    {
       "source": "/(favicon.png|preview.png|sitemap.xml|robots.txt)",
       "destination": "/$1"
     },

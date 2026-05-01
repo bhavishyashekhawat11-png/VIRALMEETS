@@ -1,11 +1,11 @@
 import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Rocket, Check, Lock, X, Sparkles, Zap, BarChart3, Wand2, AlertCircle, Loader2, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Rocket, Check, Lock, X, Sparkles, Zap, BarChart3, Wand2, AlertCircle, Loader2, ShieldCheck, ArrowRight, Activity } from 'lucide-react';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { cn } from '../lib/utils';
 
 export const UpgradeModal = memo(({ onManageSubscription }: { onManageSubscription?: () => void }) => {
-  const { showUpgradeModal, setShowUpgradeModal, upgrade, paymentLoading, paymentError } = useSubscription();
+  const { showUpgradeModal, setShowUpgradeModal, upgrade, paymentLoading, paymentError, refreshStatus } = useSubscription();
 
   if (!showUpgradeModal) return null;
 
@@ -157,6 +157,16 @@ export const UpgradeModal = memo(({ onManageSubscription }: { onManageSubscripti
                   </>
                 )}
               </button>
+
+              {paymentLoading && (
+                <button 
+                  onClick={() => refreshStatus()}
+                  className="w-full flex items-center justify-center gap-2 text-[10px] font-black text-rose-500 hover:text-rose-400 uppercase tracking-widest py-2 transition-all"
+                >
+                  <Activity className="w-3 h-3 animate-pulse" />
+                  Check Payment Status
+                </button>
+              )}
 
               {/* Monthly option link */}
               <button 

@@ -16,8 +16,8 @@ export default async function handler(req, res) {
     });
 
     // 3. Get info from request body
-    const { planType, currency = "INR" } = req.body;
-    console.log("Plan Type Received:", planType);
+    const { planType, userId, currency = "INR" } = req.body;
+    console.log("Plan Type Received:", planType, "User ID:", userId);
 
     if (!planType) {
       return res.status(400).json({ error: 'planType is required' });
@@ -41,6 +41,10 @@ export default async function handler(req, res) {
       amount: finalAmount,
       currency: currency,
       receipt: `receipt_order_${Date.now()}`,
+      notes: {
+        userId: userId || 'unknown',
+        planType: planType
+      }
     };
 
     // 6. Generate the order
